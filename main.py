@@ -28,4 +28,3 @@ if __name__ == '__main__':
 
     data_preparation.time_series(catalogue_geysers)
 
-# jebac
