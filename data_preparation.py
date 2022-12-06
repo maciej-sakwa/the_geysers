@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-
 """
 This library contains functions used in preparation of datasets used for The Geysers activity. The functions are:
     - density_calculation - deprecated function
@@ -129,18 +128,19 @@ def compile_dataset(dataset):
             dataset_month = dataset[(dataset.year == y) & (dataset.month == m)]
 
             # Data aggregation by location indexes - Magnitude count (density) and mean is found
-            dataset_loc = dataset_month.groupby(['lat_id', 'long_id', 'depth_id'])['Magnitude'].agg(['count', 'mean', 'max', 'min'])
+            dataset_loc = dataset_month.groupby(['lat_id', 'long_id', 'depth_id'])['Magnitude'].agg(
+                ['count', 'mean', 'max', 'min'])
 
             # Dataframe tidy up
             dataset_reset = dataset_loc.reset_index()
             time = {'year': y, 'month': m}
             dataset_reset = dataset_reset.assign(**time)
 
-
             # Concat
             dataset_full = pd.concat([dataset_full, dataset_reset], ignore_index=True)
 
-    dataset_full = dataset_full.rename(columns={'count': 'density', 'mean': 'mag_mean', 'max': 'mag_max', 'min': 'mag_min'})
+    dataset_full = dataset_full.rename(
+        columns={'count': 'density', 'mean': 'mag_mean', 'max': 'mag_max', 'min': 'mag_min'})
 
     return dataset_full
 
@@ -149,7 +149,7 @@ def index_1d(row, max_lat, max_long):
     lat_id = row['lat_id']
     long_id = row['long_id']
     depth_id = row['depth_id']
-    return lat_id + max_lat * long_id + max_lat * max_long * depth_id
+    return int(lat_id + max_lat * long_id + max_lat * max_long * depth_id)
 
 
 def index_3d(index, max_lat, max_long):
@@ -161,13 +161,42 @@ def index_3d(index, max_lat, max_long):
 
 
 def time_series(density_dataset):
-
+    """
+    Create a time series array based on generated density dataset
+    :param density_dataset:
+    :return:
+    """
     lat_max = density_dataset['lat_id'].max()
     long_max = density_dataset['long_id'].max()
 
-    print(lat_max, long_max)
-
     density_dataset['index_1D'] = density_dataset.apply(lambda row: index_1d(row, lat_max, long_max), axis=1)
-    density_dataset['month_id'] = density_dataset.apply(lambda row: (row.year - 2006)*12 + row.month, axis=1)
+    density_dataset['month_id'] = density_dataset.apply(lambda row: int((row.year - 2006) * 12 + row.month), axis=1)
 
-    a=1
+    max_id = density_dataset['index_1D'].max()
+    min_id = density_dataset['index_1D'].min()
+
+    # preallocation of results - in the output array each row corresponds to one cube, and each columt to one month
+    result = np.empty((density_dataset['index_1D'].max() + 1, density_dataset['month_id'].max()))
+
+    for i in range(max_id):
+        print(str(i))
+
+        # Skip loop if there is no density in given cube
+        if density_dataset[density_dataset['index_1D'] == i] is None:
+            continue
+
+        selected_data = density_dataset[density_dataset['index_1D'] == i]
+
+        for ii in range(density_dataset['month_id'].max()):
+
+
+
+            if selected_data[selected_data['month_id'] == ii].empty:
+                continue
+            else:
+                month_data = selected_data[selected_data['month_id'] == ii]
+
+                result[i, ii] = month_data.iloc[0, 4]
+
+
+    np.savetxt("../data/time_series.csv", result, delimiter=",")
