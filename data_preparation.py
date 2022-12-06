@@ -4,9 +4,9 @@ import pandas as pd
 
 """
 This library contains functions used in preparation of datasets used for The Geysers activity. The functions are:
-    - density_calclation - deprecated function
+    - density_calculation - deprecated function
     - index_cubes - find the cube (x,y,z) coordinates indexes for all entries in pandas dataset
-    - find_clusest - find the closest value (or index) from a sorted dataset
+    - find_closest - find the closest value (or index) from a sorted dataset
     - compile_dataset - compiles the density dataset
 
 """
