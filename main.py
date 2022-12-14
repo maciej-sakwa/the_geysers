@@ -1,5 +1,5 @@
 from typing import List, Union, Any
-
+import numpy as np
 import pandas as pd
 import plotting_geo
 import data_preparation
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     #              'long_min': -122.95,
     #              'long_max': -122.65,
     #              'depth_min': 0,
-    #              'depth_max': 15}
+    #              'depth_max': 14}
     #
     # catalogue_geysers_full = pd.read_csv('../data/catalogue.csv')
     #
@@ -21,16 +21,21 @@ if __name__ == '__main__':
     #                                             (catalogue_geysers_full['Longitude'] >= geo_bound['long_min']) &
     #                                             (catalogue_geysers_full['Longitude'] <= geo_bound['long_max'])]
     #
-    # catalogue_geysers_indexed = data_preparation.index_cubes(catalogue_geysers, geo_bound, step_l=0.025, step_d=0.25)
+    # catalogue_geysers_indexed = data_preparation.index_cubes(catalogue_geysers, geo_bound, step_l=0.025, step_d=2)
     # final_dataset = data_preparation.compile_dataset(catalogue_geysers_indexed)
-    # final_dataset.to_csv('../data/results_indexed_20062016.csv')
+    # final_dataset.to_csv('../data/results_indexed_20062016_2km.csv')
 
-    # catalogue_geysers = pd.read_csv('../data/results_indexed_20062016.csv')
-    #
-    # data_preparation.time_series(catalogue_geysers)
+    catalogue_geysers = pd.read_csv('../data/results_indexed_20062016_2km.csv')
+    # plotting_geo.density(catalogue_geysers, 2007, 7)
+    plotting_geo.contour_plot(catalogue_geysers, 0)
+    plotting_geo.make_gif('../images/depth_0', 0)
 
-    timeseries = pd.read_csv('../data/time_series.csv')
-    plt.plot(timeseries.iloc[51,:])
-    plt.plot(timeseries.iloc[75,:])
-    plt.plot(timeseries.iloc[74, :])
-    plt.show()
+
+
+    # time_series = data_preparation.time_series(catalogue_geysers)
+    # np.savetxt("../data/time_series_2km.csv", time_series, delimiter=",")
+
+    # timeseries = pd.read_csv('../data/time_series.csv')
+    # plt.show()
+
+

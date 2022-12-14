@@ -176,7 +176,7 @@ def time_series(density_dataset):
     min_id = density_dataset['index_1D'].min()
 
     # preallocation of results - in the output array each row corresponds to one cube, and each columt to one month
-    result = np.empty((density_dataset['index_1D'].max() + 1, density_dataset['month_id'].max()))
+    result = np.zeros((density_dataset['index_1D'].max() + 1, density_dataset['month_id'].max()))
 
     for i in range(max_id):
         print(str(i))
@@ -199,4 +199,5 @@ def time_series(density_dataset):
                 result[i, ii] = month_data.iloc[0, 4]
 
 
-    np.savetxt("../data/time_series.csv", result, delimiter=",")
+    return result
+

@@ -1,7 +1,18 @@
 from mpl_toolkits import mplot3d
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from PIL import Image
+import glob
 import numpy as np
+import os
 
+#General plot parameters
+mpl.rcParams['font.family'] = 'Avenir'
+mpl.rcParams['font.size'] = 12
+mpl.rcParams['axes.linewidth'] = 1.5
+# mpl.rcParams['axes.spines.top'] = False
+# mpl.rcParams['ases.spines.right'] = False
 
 
 def density(dataset, year, month):
@@ -14,7 +25,7 @@ def density(dataset, year, month):
     :return:
     """
 
-    selected_data = dataset[(dataset['year'] == year) & (dataset['month'] == month) & (dataset['density'] > 1)]
+    selected_data = dataset[(dataset['year'] == year) & (dataset['month'] == month)]
     lat = np.array(selected_data['lat_id'])
     long = np.array(selected_data['long_id'])
     depth = np.array(selected_data['depth_id'])
@@ -51,4 +62,39 @@ def time(dataset, geo_bound):
     plt.scatter(x=selected_data.index, y=selected_data['density'])
     plt.show()
 
-    #x
+
+def contour_plot(density_dataset, d):
+
+    depth_levels = np.sort(density_dataset.depth_id.unique())
+    print(depth_levels)
+    density_level = density_dataset[density_dataset['depth_id'] == depth_levels[d]]
+    years = density_dataset.year.unique()
+    dir_path='../images'
+    top = density_level['density'].max()
+    bottom = density_level['density'].min()
+
+    for year in years:
+        yearly_data = density_level.groupby(['lat_id', 'long_id', 'year'])['density'].sum().reset_index()
+        selected_data = yearly_data[yearly_data['year'] == year].reset_index()
+        density_matrix = np.zeros((selected_data.lat_id.max() + 1, selected_data.long_id.max() + 1))
+
+        for index, row in selected_data.iterrows():
+            i = row['lat_id']
+            j = row['long_id']
+            density_matrix[i, j] = row['density']
+
+        fig, ax = plt.subplots(1, 1)
+        cp = ax.contourf(density_matrix, vmax = 3000, vmin=0)
+        plt.colorbar(cp)
+        plt.title('Contour plot for depth: ' + str(2 * depth_levels[d]) + ' to: ' + str(2 * depth_levels[d] + 2)
+                  + ', year: ' +str(year))
+        file_path = 'depth_'+str(2*depth_levels[d])
+        file_name = 'contour_' + str(2* depth_levels[d]) + '_' + str(year)
+        file_path = os.path.join(dir_path, file_path, file_name)
+        plt.savefig(file_path)
+
+
+def make_gif(frame_folder, depth):
+    frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
+    frame_one = frames[0]
+    frame_one.save("depth_"+str(depth)+".gif", format="GIF", append_images=frames, save_all=True, duration=200, loop=0)
