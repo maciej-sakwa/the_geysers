@@ -25,10 +25,11 @@ if __name__ == '__main__':
     # final_dataset = data_preparation.compile_dataset(catalogue_geysers_indexed)
     # final_dataset.to_csv('../data/results_indexed_20062016_2km.csv')
 
+
     catalogue_geysers = pd.read_csv('../data/results_indexed_20062016_2km.csv')
     # plotting_geo.density(catalogue_geysers, 2007, 7)
-    plotting_geo.contour_plot(catalogue_geysers, 0)
-    plotting_geo.make_gif('../images/depth_0', 0)
+    plotting_geo.contour_plot(catalogue_geysers, 5)
+    plotting_geo.make_gif('../images/depth_10', 10)
 
 
 

@@ -8,7 +8,6 @@ import numpy as np
 import os
 
 #General plot parameters
-mpl.rcParams['font.family'] = 'Avenir'
 mpl.rcParams['font.size'] = 12
 mpl.rcParams['axes.linewidth'] = 1.5
 # mpl.rcParams['axes.spines.top'] = False
@@ -84,7 +83,7 @@ def contour_plot(density_dataset, d):
             density_matrix[i, j] = row['density']
 
         fig, ax = plt.subplots(1, 1)
-        cp = ax.contourf(density_matrix, vmax = 3000, vmin=0)
+        cp = ax.contourf(density_matrix)
         plt.colorbar(cp)
         plt.title('Contour plot for depth: ' + str(2 * depth_levels[d]) + ' to: ' + str(2 * depth_levels[d] + 2)
                   + ', year: ' +str(year))
