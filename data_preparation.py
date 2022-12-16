@@ -171,7 +171,7 @@ def time_series(density_dataset):
 
     density_dataset['index_1D'] = density_dataset.apply(lambda row: index_1d(row, lat_max, long_max), axis=1)
     density_dataset['month_id'] = density_dataset.apply(lambda row: int((row.year - 2006) * 12 + row.month), axis=1)
-
+    print(density_dataset['month_id'].max())
     max_id = density_dataset['index_1D'].max()
     min_id = density_dataset['index_1D'].min()
 
@@ -189,15 +189,13 @@ def time_series(density_dataset):
 
         for ii in range(density_dataset['month_id'].max()):
 
-
-
             if selected_data[selected_data['month_id'] == ii].empty:
                 continue
             else:
                 month_data = selected_data[selected_data['month_id'] == ii]
 
                 result[i, ii] = month_data.iloc[0, 4]
-
+    result = result.astype('int32')
 
     return result
 
