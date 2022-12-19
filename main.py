@@ -95,5 +95,7 @@ def main(**kwargs):
     #     plt.title('Example time series for cluster '+str(clust))
     #     plt.show()
 
+
 if __name__ == '__main__':
+
     main(do_clustering=False, timeseries=False, generate_dataset=False)
