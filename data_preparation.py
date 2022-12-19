@@ -77,14 +77,14 @@ def index_cubes(dataset, geo_bound, step_l, step_d):
     depth_range = np.arange(geo_bound['depth_min'], geo_bound['depth_max'] + step_d, step_d)
 
     # Adding cube x,y,z indexes to the dataframe
-    dataset['lat_id'] = dataset.apply(lambda row: find_closest(lat_range, row, "Latitude"), axis=1)
-    dataset['long_id'] = dataset.apply(lambda row: find_closest(long_range, row, "Longitude"), axis=1)
-    dataset['depth_id'] = dataset.apply(lambda row: find_closest(depth_range, row, "Depthkm"), axis=1)
 
+    dataset['lat_id'] = dataset.apply(lambda row: find_closest_ind(lat_range, row, "Latitude"), axis=1)
+    dataset['long_id'] = dataset.apply(lambda row: find_closest_ind(long_range, row, "Longitude"), axis=1)
+    dataset['depth_id'] = dataset.apply(lambda row: find_closest_ind(depth_range, row, "Depthkm"), axis=1)
     return dataset
 
 
-def find_closest(array, row, col_id):
+def find_closest_ind(array, row, col_id):
     """
     Find the closest lower value in a sorted array (possibly there is an easier way to do it)
 
@@ -146,9 +146,19 @@ def compile_dataset(dataset):
 
 
 def index_1d(row, max_lat, max_long):
+    """
+    Adds a 1D index for a gicen row based on the dimensions of the dataset
+    :param row: Pandas DF row
+    :param max_lat: max latitude in the dataset
+    :param max_long: max longitude in the dataset
+    :return: index
+    """
+    # Extract data
     lat_id = row['lat_id']
     long_id = row['long_id']
     depth_id = row['depth_id']
+
+    #Retrun index
     return int(lat_id + max_lat * long_id + max_lat * max_long * depth_id)
 
 
@@ -163,8 +173,8 @@ def index_3d(index, max_lat, max_long):
 def time_series(density_dataset):
     """
     Create a time series array based on generated density dataset
-    :param density_dataset:
-    :return:
+    :param density_dataset: The indexed density dataset
+    :return: Time series
     """
     lat_max = density_dataset['lat_id'].max()
     long_max = density_dataset['long_id'].max()

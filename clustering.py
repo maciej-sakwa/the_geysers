@@ -1,16 +1,16 @@
 from sklearn.cluster import AgglomerativeClustering
-from scipy.cluster.hierarchy import dendrogram, fcluster
+from sklearn.metrics import calinski_harabasz_score, silhouette_score
+from scipy.cluster import hierarchy
+from scipy.spatial import distance
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def perform_hac(ccm, criterion='single'):
-
-    distance = 1 - ccm
+def perform_hac_sk(ccm, criterion='single'):
     clustering = AgglomerativeClustering(n_clusters=None,
-                                         distance_threshold=20,
+                                         distance_threshold=500,
                                          metric='euclidean',
-                                         linkage='ward').fit(ccm)
+                                         linkage='ward').fit(cond_matrix)
 
     # create the counts of samples under each node
     counts = np.zeros(clustering.children_.shape[0])
@@ -27,7 +27,33 @@ def perform_hac(ccm, criterion='single'):
     linkage_matrix = np.column_stack(
         [clustering.children_, clustering.distances_, counts]
     ).astype(float)
-    
-    # dendrogram(linkage_matrix, truncate_mode="level", p=5)
-    # plt.show()
+
+    hierarchy.dendrogram(linkage_matrix, truncate_mode="level", p=7)
+    plt.title('Dendrogram for % clusters' % n_clusters)
+    plt.show()
     return clustering.labels_
+
+
+def perform_hac(matrix, method='ward', threshold=0.15, n_cluster=5, criterion='distance'):
+    """
+
+    """
+    cond_matrix = distance.squareform(matrix)
+    Z = hierarchy.linkage(cond_matrix, method=method)
+    # threshold_dist = np.amax(hierarchy.cophenet(Z)) * threshold
+    # labels = hierarchy.fcluster(Z, t=threshold_dist, criterion=criterion)
+    labels = hierarchy.fcluster(Z, t=n_cluster, criterion=criterion)
+
+    # # Plot dendrogram
+    # hierarchy.dendrogram(Z, truncate_mode="level", p=8)
+    # plt.title('Dendrogram for {} clusters'.format(n_cluster))
+    # plt.ylabel('Cophenetic distance')
+    # plt.xlabel('Nodes')
+    # plt.show()
+
+    # Clusterig scores
+    # ch = calinski_harabasz_score(cond_matrix, labels)
+    sil = silhouette_score(matrix, labels)
+    print("Score: {}".format(sil))
+
+    return labels, Z
