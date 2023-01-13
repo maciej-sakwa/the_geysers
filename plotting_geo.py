@@ -2,10 +2,12 @@ from mpl_toolkits import mplot3d
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from data_preparation import find_closest_ind
 from PIL import Image
 import glob
 import numpy as np
 import os
+import plotly.graph_objects as go
 
 #General plot parameters
 mpl.rcParams['font.size'] = 12
@@ -31,35 +33,14 @@ def density(dataset, year, month):
     depth = np.array(selected_data['depth_id'])
 
 
+
+
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     geo_dens = ax.scatter3D(lat, long, depth, c=selected_data['density'])
     plt.colorbar(geo_dens)
     plt.title('3D density graph for: ' + str(month) +', ' + str(year))
     plt.tight_layout()
-    plt.show()
-
-
-def time(dataset, geo_bound):
-    """
-
-    :param dataset:
-    :param geo_bound:
-    :return:
-    """
-
-    selected_data = dataset[(dataset['lat_id'] >= geo_bound['lat_min']) &
-                            (dataset['lat_id'] <= geo_bound['lat_max']) &
-                            (dataset['long_id'] >= geo_bound['long_min']) &
-                            (dataset['long_id'] <= geo_bound['long_max']) &
-                            (dataset['depth_id'] >= geo_bound['depth_min']) &
-                            (dataset['depth_id'] <= geo_bound['depth_max']) &
-                            (dataset['density'] > 10)]
-
-
-    print(selected_data.head(10))
-
-    plt.scatter(x=selected_data.index, y=selected_data['density'])
     plt.show()
 
 
@@ -202,3 +183,88 @@ def contour_plot_cluster(dataset, depth):
     cp = ax.scatter(x=dataset_depth['lat_id'], y=dataset_depth['long_id'], c=dataset_depth['cluster'])
     plt.colorbar(cp)
     plt.show()
+
+
+    # # Plotting
+    # plotting_geo.plot_cluster(catalogue_geysers_clustered, skip=[1,2,3])
+    # plotting_geo.plot_average(time_series, cluster_labels)
+    # plotting_geo.plot_all(time_series, cluster_labels, cluster=4)
+    # for label in unique_labels:
+    #     plotting_geo.plot_average_single(time_series, cluster_labels, cluster=label)
+    # plotting_geo.contour_plot_cluster(catalogue_geysers_clustered, 2)
+
+    # fig, axs = plt.subplots(pca.n_components, sharex='all')
+    # for i, ax in zip(range(pca.n_components), axs.ravel()):
+    #     ax.plot(pca.components_[i], label='Component {}'.format(i+1))
+    #     ax.legend(loc='upper right')
+    # plt.show()
+
+    # plt.plot(injections['month_id'],injections['sum'], label='Sum')
+    # # plt.plot(injections['Prati9'], label='Prati9')
+    # # plt.plot(injections['Prati29'], label='Prati29')
+    # plt.legend()
+    # plt.show()
+    # a=1
+
+    # fig, ax = plt.subplots(3, sharex='all')
+    # ax[0].plot(-pca.components_[0], label='Component 1')
+    # # ax[0].plot(pca.components_[1], label='Component 2')
+    # ax[0].legend()
+    # ax[1].plot(injections['month_id'], injections['sum'], label='Sum')
+    # ax[1].plot(injections['month_id'], injections['Prati9'], label='Prati9')
+    # ax[1].plot(injections['month_id'], injections['Prati29'], label='Prati29')
+    # ax[1].legend()
+    # ax[2].plot(means[0], label='Cluster 4')
+    # ax[2].plot(means[1], label='Cluster 5')
+    # ax[2].legend()
+    # plt.show()
+
+
+def volume_plot(density_df, geo_bound):
+
+    density_grouped = density_df.groupby(['lat', 'long', 'depth'])['cluster'].mean()
+    density_selected = density_grouped.reset_index()
+
+    lat_unique = np.sort(density_selected['lat'].unique())
+    long_unique = np.sort(density_selected['long'].unique())
+    depth_unique = np.sort(density_selected['depth'].unique())
+
+    density_selected['lat_id'] = density_selected.apply(lambda row: find_closest_ind(lat_unique, row, "lat"), axis=1)
+    density_selected['long_id'] = density_selected.apply(lambda row: find_closest_ind(long_unique, row, "long"), axis=1)
+    density_selected['depth_id'] = density_selected.apply(lambda row: find_closest_ind(depth_unique, row, "depth"), axis=1)
+
+
+    X, Y, Z = np.meshgrid(lat_unique, long_unique, depth_unique)
+    values = np.zeros((len(lat_unique), len(long_unique), len(depth_unique)))
+    print(range(len(lat_unique)))
+    print(range(len(long_unique)))
+    print(range(len(depth_unique)))
+
+    for x in range(len(lat_unique)):
+        for y in range(len(long_unique)):
+            for z in range(len(depth_unique)):
+                data = density_selected[(density_selected['lat_id'] == x) &
+                                        (density_selected['long_id'] == y) &
+                                        (density_selected['depth_id'] == z)]
+                if data.shape[0] == 0:
+                    continue
+                else:
+                    row = data.to_numpy()
+                    values[x, y, z] = row[0, 3]
+                    print(str(values[x, y, z]), str(row[0,3]))
+
+
+
+    fig = go.Figure(data=go.Isosurface(
+        x=X.flatten(),
+        y=Y.flatten(),
+        z=-Z.flatten(),
+        value=values.flatten(),
+        opacity=0.5,
+        isomin=0,
+        isomax=5,
+        surface_count=6,
+        colorbar_nticks = 6
+    ))
+
+    fig.show()
