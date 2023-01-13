@@ -1,6 +1,7 @@
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import calinski_harabasz_score, silhouette_score
 from sklearn.decomposition import FastICA, PCA
+from sklearn.preprocessing import StandardScaler
 from scipy.cluster import hierarchy
 from scipy.spatial import distance
 import numpy as np
@@ -164,13 +165,8 @@ def perform_pca(time_series, labels, n_components=2, main_clusters=[4,5]):
         index = x-1
         averages_ica.append(averages[index])
 
+    scaler = StandardScaler()
+    transformer = PCA(n_components=2, random_state=0, whiten=True)
+    means = scaler.fit_transform(np.array(averages_ica).T)
 
-
-    transformer = PCA(n_components=2, random_state=0, whiten=False)
-    averages_transformed = transformer.fit_transform(np.array(averages_ica))
-    print('Result')
-    print(averages_transformed)
-    print('Components')
-    print(transformer.components_)
-
-    return averages_ica, transformer
+    return np.array(averages_ica).T, means, transformer
