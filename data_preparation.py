@@ -7,6 +7,8 @@ This library contains functions used in preparation of datasets used for The Gey
     - index_cubes - find the cube (x,y,z) coordinates indexes for all entries in pandas dataset
     - find_closest - find the closest value (or index) from a sorted dataset
     - compile_dataset - compiles the density dataset
+    - index_1d
+    - time_series
 
 """
 
@@ -80,7 +82,7 @@ def index_cubes(dataset, geo_bound, step_l, step_d):
 
     dataset['lat_id'] = dataset.apply(lambda row: find_closest_ind(lat_range, row, "Latitude"), axis=1)
     dataset['long_id'] = dataset.apply(lambda row: find_closest_ind(long_range, row, "Longitude"), axis=1)
-    dataset['depth_id'] = dataset.apply(lambda row: find_closest_ind(depth_range, row, "Depthkm"), axis=1)
+    dataset['depth_id'] = dataset.apply(lambda row: find_closest_ind(depth_range, row, r"Depth"), axis=1)
     return dataset
 
 
@@ -162,14 +164,6 @@ def index_1d(row, max_lat, max_long):
     return int(lat_id + max_lat * long_id + max_lat * max_long * depth_id)
 
 
-def index_3d(index, max_lat, max_long):
-    lat_id = index % max_lat
-    long_id = (index / max_lat) % max_long
-    depth_id = index / (max_lat * max_long)
-
-    return [lat_id, long_id, depth_id]
-
-
 def time_series(density_dataset):
     """
     Create a time series array based on generated density dataset
@@ -208,4 +202,60 @@ def time_series(density_dataset):
     result = result.astype('int32')
 
     return result
+
+
+def b_value_error(df_catalogue) -> ndarrays:
+    """
+    Calculates b-value means and std error for the chosen clusters
+
+    :param df_catalogue: the geysers catalogue with cluster labels
+    """
+
+
+    # Bins and clusters definitions
+    bin_size = 0.2
+    clusters = [3, 4, 5]
+    bins = np.arange(0, 3.9, bin_size)
+    bin_labels = [f'{item + 0.2: .1f}' for item in bins]
+
+    # Result bins
+    slopes = []
+    slope_means = []
+    slope_stds = []
+
+    for item in clusters:
+
+        # Filter the catalogue for the Earthquakes belonging to chosen cluster
+        df_filtered = df_catalogue.query(f'cluster == {item}').copy()
+        # Cut the dataset into bins based on the Magnitude, add the bin label as new column (an extract it as np array)
+        df_filtered['Mag_dist'] = pd.cut(df_filtered['Magnitude'], bins, labels=bin_labels[:-1])
+        magnitudes_filtered = df_filtered['Mag_dist'].to_numpy()
+
+        # Bootstrap iterations
+        for i in range(100):
+            # Randomly select the magnitudes with replacement, save as df to use groupby later
+            magnitudes_random = np.random.choice(magnitudes_filtered, size=len(magnitudes_filtered), replace=True)
+            df_magnitudes_random = pd.DataFrame(magnitudes_random, columns=['Mag_dist'])
+
+            # Create a logarithmic distribution
+            df_distribution = np.log10(df_magnitudes_random.groupby(['Mag_dist'])['Mag_dist'].count())
+
+            # Calculate slope between 1.6 and 3
+            mag_min = 1.6
+            mag_max = 3.0
+
+            dist_min = df_distribution[int(mag_min / bin_size)]
+            dist_max = df_distribution[int(mag_max / bin_size)]
+
+            slope = - (dist_min - dist_max) / (mag_min - mag_max)
+            print(f'{slope}')
+            slopes.append(slope)
+
+        # Save results
+        slope_means.append(np.mean(slopes))
+        slope_stds.append(np.std(slopes))
+
+        return slope_means, slope_stds
+
+
 
