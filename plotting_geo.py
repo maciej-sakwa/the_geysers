@@ -7,7 +7,6 @@ from PIL import Image
 import glob
 import numpy as np
 import os
-import plotly.graph_objects as go
 
 #General plot parameters
 mpl.rcParams['font.size'] = 12
@@ -102,7 +101,7 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
     mpl.rcParams['font.size'] = 14
     arr_labels = np.array(cluster_labels['cluster'])
     clusters = [3, 4, 5]
-    legend_labels = ['DTH-A', 'DTH-B', 'DTH-C']
+    legend_labels = ['DTH-C', 'DTH-B', 'DTH-A']
     years = np.arange(2006, 2017, 1)
     tick_labels = [f'\'{item[-2:]}' for item in map(str, years)]
     i = 0
@@ -128,64 +127,21 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
         ax.set_xticks(np.arange(0, 121, 12))
         ax.set_xticklabels(tick_labels)
         ax.set_xlim([0, 125])
+        ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
         i += 1
 
+    axs[0].set_yticks([0, 0.2])
+    axs[1].set_yticks([0, 0.5])
+    axs[2].set_yticks([0, 0.5])
     # Plot area settings
     fig.supylabel('Normalized density [p.u.]')
     fig.set_size_inches(8, 7.5)
+    ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
     plt.xlabel('Observation date [y]')
     plt.tight_layout()
     plt.show()
 
 
-def volume_plot(density_df, geo_bound):
-
-    density_grouped = density_df.groupby(['lat', 'long', 'depth'])['cluster'].mean()
-    density_selected = density_grouped.reset_index()
-
-    lat_unique = np.sort(density_selected['lat'].unique())
-    long_unique = np.sort(density_selected['long'].unique())
-    depth_unique = np.sort(density_selected['depth'].unique())
-
-    density_selected['lat_id'] = density_selected.apply(lambda row: find_closest_ind(lat_unique, row, "lat"), axis=1)
-    density_selected['long_id'] = density_selected.apply(lambda row: find_closest_ind(long_unique, row, "long"), axis=1)
-    density_selected['depth_id'] = density_selected.apply(lambda row: find_closest_ind(depth_unique, row, "depth"), axis=1)
-
-
-    X, Y, Z = np.meshgrid(lat_unique, long_unique, depth_unique)
-    values = np.zeros((len(lat_unique), len(long_unique), len(depth_unique)))
-    print(range(len(lat_unique)))
-    print(range(len(long_unique)))
-    print(range(len(depth_unique)))
-
-    for x in range(len(lat_unique)):
-        for y in range(len(long_unique)):
-            for z in range(len(depth_unique)):
-                data = density_selected[(density_selected['lat_id'] == x) &
-                                        (density_selected['long_id'] == y) &
-                                        (density_selected['depth_id'] == z)]
-                if data.shape[0] == 0:
-                    continue
-                else:
-                    row = data.to_numpy()
-                    values[x, y, z] = row[0, 3]
-                    print(str(values[x, y, z]), str(row[0,3]))
-
-
-
-    fig = go.Figure(data=go.Isosurface(
-        x=X.flatten(),
-        y=Y.flatten(),
-        z=-Z.flatten(),
-        value=values.flatten(),
-        opacity=0.5,
-        isomin=0,
-        isomax=5,
-        surface_count=6,
-        colorbar_nticks = 6
-    ))
-
-    fig.show()
 
 
   # fig, ax = plt.subplots(4)
