@@ -144,6 +144,7 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
 
 
 
+
   # fig, ax = plt.subplots(4)
     # for i in range(3):
     #     ax[0].plot(np.array(ind_components.iloc[:, i+1]).T, label='IC: {}'.format(i+1))
