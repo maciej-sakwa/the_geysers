@@ -102,7 +102,7 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
     mpl.rcParams['font.size'] = 14
     arr_labels = np.array(cluster_labels['cluster'])
     clusters = [3, 4, 5]
-    legend_labels = ['DTH-A', 'DTH-B', 'DTH-C']
+    legend_labels = ['DTH-C', 'DTH-B', 'DTH-A']
     years = np.arange(2006, 2017, 1)
     tick_labels = [f'\'{item[-2:]}' for item in map(str, years)]
     i = 0
@@ -128,14 +128,20 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
         ax.set_xticks(np.arange(0, 121, 12))
         ax.set_xticklabels(tick_labels)
         ax.set_xlim([0, 125])
+        ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
         i += 1
 
+    axs[0].set_yticks([0, 0.2])
+    axs[1].set_yticks([0, 0.5])
+    axs[2].set_yticks([0, 0.5])
     # Plot area settings
     fig.supylabel('Normalized density [p.u.]')
     fig.set_size_inches(8, 7.5)
+    ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
     plt.xlabel('Observation date [y]')
     plt.tight_layout()
     plt.show()
+
 
 
 def volume_plot(density_df, geo_bound):

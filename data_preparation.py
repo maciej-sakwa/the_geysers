@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from scipy.stats import linregress
+
 
 """
 This library contains functions used in preparation of datasets used for The Geysers activity. The functions are:
@@ -12,54 +14,6 @@ This library contains functions used in preparation of datasets used for The Gey
 
 """
 
-
-def density_calculation(dataset, geo_bound, step_l, step_d):
-    """
-    Deprecated function
-
-    :param dataset: pandas DF; catalogue geysers file
-    :param geo_bound: dictionary; geometric boundaries
-    :param step_l: latitude and longitude step
-    :param step_d: depth step
-    :return:
-    """
-
-    years = dataset.year.unique()
-    months = dataset.month.unique()
-    lat_range = np.arange(geo_bound['lat_min'], geo_bound['lat_max'], step_l)
-    long_range = np.arange(geo_bound['long_min'], geo_bound['long_max'], step_l)
-    depth_range = np.arange(geo_bound['depth_min'], geo_bound['depth_max'], step_d)
-    table_row = []
-    results = []
-
-    for y in years:
-        print(str(y))
-        data_extracted_year = dataset[(dataset['year'] == y)]
-        for m in months:
-            print(str(m))
-            data_extracted_month = data_extracted_year[(data_extracted_year['month'] == m)]
-            for lat in lat_range:
-                data_extracted_pos = data_extracted_month[(data_extracted_month['Latitude'] >= lat) &
-                                                          (data_extracted_month['Latitude'] < (lat + step_l))]
-                for long in long_range:
-                    data_extracted_pos = data_extracted_pos[(data_extracted_pos['Longitude'] >= long) &
-                                                            (data_extracted_pos['Longitude'] < (long + step_l))]
-                    for dep in depth_range:
-                        data_extracted = data_extracted_pos.loc[(data_extracted_pos['Depthkm'] >= dep) &
-                                                                (data_extracted_pos['Depthkm'] < (dep + step_d))]
-                        density = len(data_extracted)
-
-                        magmax = data_extracted
-                        table_row = [y, m, lat, lat + step_l, long, long + step_l, dep, dep + step_d,
-                                     density]
-
-                        results.append(table_row)
-
-    results_columns = ['year', 'month', 'lat', 'lat_step', 'long', 'long_step', 'depth', 'depth_step', 'density']
-
-    results_df = pd.DataFrame(results, columns=results_columns)
-    results_df.to_csv('../data/results20062016.csv')
-    print('Done')
 
 
 def index_cubes(dataset, geo_bound, step_l, step_d):
@@ -204,7 +158,7 @@ def time_series(density_dataset):
     return result
 
 
-def b_value_error(df_catalogue) -> ndarrays:
+def b_value_error(df_catalogue):
     """
     Calculates b-value means and std error for the chosen clusters
 
@@ -215,21 +169,22 @@ def b_value_error(df_catalogue) -> ndarrays:
     # Bins and clusters definitions
     bin_size = 0.2
     clusters = [3, 4, 5]
-    bins = np.arange(0, 3.9, bin_size)
-    bin_labels = [f'{item + 0.2: .1f}' for item in bins]
+    bins = np.arange(-1, 5, bin_size)
+    bin_labels = [f'{item: .1f}' for item in bins]
 
     # Result bins
-    slopes = []
     slope_means = []
     slope_stds = []
 
     for item in clusters:
 
+        # Result bins
+        slopes = []
+
         # Filter the catalogue for the Earthquakes belonging to chosen cluster
         df_filtered = df_catalogue.query(f'cluster == {item}').copy()
         # Cut the dataset into bins based on the Magnitude, add the bin label as new column (an extract it as np array)
-        df_filtered['Mag_dist'] = pd.cut(df_filtered['Magnitude'], bins, labels=bin_labels[:-1])
-        magnitudes_filtered = df_filtered['Mag_dist'].to_numpy()
+        magnitudes_filtered = pd.cut(df_filtered['Magnitude'], bins, labels=bin_labels[:-1]).to_numpy()
 
         # Bootstrap iterations
         for i in range(100):
@@ -238,24 +193,23 @@ def b_value_error(df_catalogue) -> ndarrays:
             df_magnitudes_random = pd.DataFrame(magnitudes_random, columns=['Mag_dist'])
 
             # Create a logarithmic distribution
-            df_distribution = np.log10(df_magnitudes_random.groupby(['Mag_dist'])['Mag_dist'].count())
+            log_distribution = np.log10(df_magnitudes_random.groupby(['Mag_dist'])['Mag_dist'].count())
 
             # Calculate slope between 1.6 and 3
-            mag_min = 1.6
+            mag_min = 1.8
             mag_max = 3.0
 
-            dist_min = df_distribution[int(mag_min / bin_size)]
-            dist_max = df_distribution[int(mag_max / bin_size)]
+            x_lr = np.arange(mag_min, mag_max + bin_size, bin_size)
+            y_lr = log_distribution[int(mag_min / bin_size)-1: int(mag_max / bin_size)].to_numpy()
+            lin_reg = linregress(x=x_lr, y=y_lr)
 
-            slope = - (dist_min - dist_max) / (mag_min - mag_max)
-            print(f'{slope}')
-            slopes.append(slope)
+            slopes.append(-lin_reg.slope)
 
         # Save results
         slope_means.append(np.mean(slopes))
         slope_stds.append(np.std(slopes))
 
-        return slope_means, slope_stds
+    return slope_means, slope_stds
 
 
 

@@ -7,9 +7,14 @@ import matplotlib.pyplot as plt
 from GPU_cross_correlation import GPUTensorCC
 import pickle
 import clustering
+import matplotlib as mpl
+import math
+import random
+import os
+from scipy.stats import linregress
 
 
-def main(generate_dataset=True, load_timeseries=True, do_clustering=True, load_injections=True):
+def main(generate_dataset=True, load_timeseries=True, do_clustering=True):
     # Density dataset generation
     geo_bound = {'lat_min': 38.7,
                  'lat_max': 38.9,
@@ -52,10 +57,10 @@ def main(generate_dataset=True, load_timeseries=True, do_clustering=True, load_i
         time_series = np.array(pd.read_csv('../data/time_series.csv', header=None))
         print('time_series - dataset loaded.')
 
-    # Load distance matrix
-    with open('../data/distance_matrix_ok.pickle', 'rb') as pickle_file:
-        mat_distances = pickle.load(pickle_file)
-        print('mat_distances - dataset loaded.')
+    # # Load distance matrix
+    # with open('../data/distance_matrix_ok.pickle', 'rb') as pickle_file:
+    #     mat_distances = pickle.load(pickle_file)
+    #     print('mat_distances - dataset loaded.')
 
     # Perform HAC clustering - save results as PD DF
     if do_clustering:
@@ -67,37 +72,53 @@ def main(generate_dataset=True, load_timeseries=True, do_clustering=True, load_i
         cluster_labels = pd.read_csv('../data/cluster_labels')
         unique_labels = np.unique(np.array(cluster_labels['cluster']))
 
-    # Merge results with original DF
-    catalogue_geysers = pd.read_csv('../data/results_20062016.csv')
-    catalogue_geysers_clustered = catalogue_geysers.merge(cluster_labels, left_on='index_1D', right_index=True)
-    catalogue_geysers_clustered.to_csv('../data/full_results_new_matrix.csv')
+    # # Merge results with original DF
+    # catalogue_geysers = pd.read_csv('../data/results_20062016.csv')
+    # catalogue_geysers_clustered = catalogue_geysers.merge(cluster_labels, left_on='index_1D', right_index=True)
+    # catalogue_geysers_clustered.to_csv('../data/full_results_new_matrix.csv')
 
-    # catalogue_geysers_clustered = pd.read_csv('../data/full_results_norm_dist_n_5')
+    df_catalogue = pd.read_csv('../data/reduced_catalogue_clustered.csv', index_col=[0])
     print('catalogue_geysers_clustered - dataset loaded.')
 
-    if load_injections:
-        # Load injections
-        injections = pd.read_csv('../data/injections.csv', names=['year', 'month', 'Prati9', 'Prati29', 'sum'])
-        injections = injections[injections.year < 2017]
-        injections['month_id'] = injections.apply(lambda row: int((row.year - 2006) * 12 + row.month), axis=1)
-        print('injections - dataset loaded.')
-        # injections_history = pd.read_csv('../data/water_injection.csv', names=['year', 'injection'])
-        # injections_history['month_id'] = injections_history.apply(lambda row: int((row['year'] - 2006) * 12))
-        # injections_history_selected = injections_history[2006 <= injections_history.year <= 2016]
-        # coordinates = pd.read_csv('../data/injection_wells_coordinates.csv', names=['long', 'lat'])
-
-    means, means_std, pca = clustering.perform_pca(time_series, cluster_labels)
-    np.savetxt('../data/mixtures_new.csv', means, delimiter=',')
-    np.savetxt('../data/mixtures_std_new.csv', means_std, delimiter=',')
-    # pca_fitted_std = pca.fit_transform(means_std)
-    # for i in range(len(pca_fitted_std.T)):
-    #     plt.plot(pca_fitted_std.T[i], label='Principal component {}'.format(i))
-    # plt.legend()
+    # bvalue_means, bvalue_stds = data_preparation.b_value_error(df_catalogue)
+    #
+    # print(f'Mean b-value over iterations: {bvalue_means}')
+    # print(f'B-value error over iterations: {bvalue_stds}')
+    #
+    # plt.errorbar([3, 4, 5], bvalue_means, yerr=bvalue_stds, marker='D', markersize=5, linestyle='None')
+    # plt.xticks([3, 4, 5], [f'Cluster {item}' for item in [3, 4, 5]])
+    # plt.yticks([0.0, 0.5, 1.0, 1.5, 2.0])
     # plt.show()
 
-    plotting_geo.volume_plot(catalogue_geysers_clustered[catalogue_geysers_clustered['cluster']>2], geo_bound)
+
+    for index, file in enumerate(os.listdir('../data/ffts')):
+        fft = np.loadtxt(os.path.join('../data/ffts', file))
+        x_lr = -np.log10(1 * np.arange(0, len(fft))[1:] / (2 * len(fft)))
+        y_lr = np.log10(fft[1:])
+        plt.plot(x_lr, y_lr, label=f"FFT {index}")
+
+        lin_reg = linregress(x_lr, y_lr)
+        print(f"Slope for fft of IC{index+1} is equal {lin_reg.slope}")
+
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.show()
+
+
+    n_clust=np.arange(3, 11, 1)
+    silhuette = [0.41, 0.1675, 0.4477, 0.439, 0.425084, 0.341536, 0.335546, 0.333744]
+
+    fig_bar = plt.bar(n_clust, silhuette, width = 0.95, color='#a7c8e2')
+    plt.grid(visible=True, axis='y', alpha=0.3, which='major', c='#dbdbdb')
+    plt.ylabel('Silhouette coefficient')
+    plt.xlabel('Number of clusters')
+    plt.tight_layout
+    plt.show()
+
+    plotting_geo.plot_means_subplots(time_series, cluster_labels)
+
 
 
 
 if __name__ == '__main__':
-    main(do_clustering=True, load_timeseries=True, generate_dataset=False, load_injections=False)
+    main(do_clustering=False, load_timeseries=True, generate_dataset=False)
