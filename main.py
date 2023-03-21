@@ -65,11 +65,11 @@ def main(generate_dataset=True, load_timeseries=True, do_clustering=True):
     #     print('mat_distances - dataset loaded.')
 
     # Perform HAC clustering - save results as PD DF
-    # if do_clustering:
-    #     labels, linkage = clustering.perform_hac(mat_distances, n_cluster=5, criterion='maxclust', method='ward')
-    #     unique_labels = np.unique(labels)
-    #     cluster_labels = pd.DataFrame(data=labels, columns=['cluster'])
-    #     cluster_labels.to_csv('../data/cluster_labels.csv')
+    if do_clustering:
+        labels, linkage = clustering.perform_hac(mat_distances, n_cluster=5, criterion='maxclust', method='ward')
+        unique_labels = np.unique(labels)
+        cluster_labels = pd.DataFrame(data=labels, columns=['cluster'])
+        cluster_labels.to_csv('../data/cluster_labels.csv')
     else:
         cluster_labels = pd.read_csv('../data/cluster_labels')
         unique_labels = np.unique(np.array(cluster_labels['cluster']))
@@ -93,18 +93,18 @@ def main(generate_dataset=True, load_timeseries=True, do_clustering=True):
     # plt.show()
 
 
-    for index, file in enumerate(os.listdir('../data/ffts')):
-        fft = np.loadtxt(os.path.join('../data/ffts', file))
-        x_lr = -np.log10(1 * np.arange(0, len(fft))[1:] / (2 * len(fft)))
-        y_lr = np.log10(fft[1:])
-        plt.plot(x_lr, y_lr, label=f"FFT {index}")
+    # for index, file in enumerate(os.listdir('../data/ffts')):
+    #     fft = np.loadtxt(os.path.join('../data/ffts', file))
+    #     x_lr = -np.log10(1 * np.arange(0, len(fft))[1:] / (2 * len(fft)))
+    #     y_lr = np.log10(fft[1:])
+    #     plt.plot(x_lr, y_lr, label=f"FFT {index}")
 
-        lin_reg = linregress(x_lr, y_lr)
-        print(f"Slope for fft of IC{index+1} is equal {lin_reg.slope}")
+    #     lin_reg = linregress(x_lr, y_lr)
+    #     print(f"Slope for fft of IC{index+1} is equal {lin_reg.slope}")
 
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.show()
+    # plt.xscale('log')
+    # plt.yscale('log')
+    # plt.show()
 
 
     n_clust=np.arange(3, 11, 1)

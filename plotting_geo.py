@@ -101,7 +101,7 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
     mpl.rcParams['font.size'] = 14
     arr_labels = np.array(cluster_labels['cluster'])
     clusters = [3, 4, 5]
-    legend_labels = ['DTH-C', 'DTH-B', 'DTH-A']
+    legend_labels = ['DTH-3', 'DTH-3', 'DTH-5']
     years = np.arange(2006, 2017, 1)
     tick_labels = [f'\'{item[-2:]}' for item in map(str, years)]
     i = 0
@@ -118,7 +118,7 @@ def plot_means_subplots(time_series, cluster_labels) -> None:
 
         # Mean and STD plots with fill between
         ax.plot(time_norm, label='{}'.format(legend_labels[i]), c='k')
-        ax.plot(time_norm + std, "k--", label='SD')
+        ax.plot(time_norm + std, "k--")
         ax.plot(time_norm - std, 'k--')
         ax.fill_between(x, time_norm - std, time_norm + std, color='#a7c8e2')
         ax.legend(loc='upper left', framealpha=1)
