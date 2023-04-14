@@ -1,22 +1,18 @@
-import math
 import os
-import pickle
-import random
 from typing import Any, List, Union
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import linregress
 
 import clustering
 import data_preparation
 import plotting_geo
-from GPU_cross_correlation import GPUTensorCC
 
 
-def main(generate_dataset=True, load_timeseries=True, do_clustering=True):
+
+
+def main(generate_dataset=True, do_clustering=True):
+    
     # Density dataset generation
     geo_bound = {'lat_min': 38.7,
                  'lat_max': 38.9,
@@ -28,36 +24,25 @@ def main(generate_dataset=True, load_timeseries=True, do_clustering=True):
                  'step_d': 0.25}
 
     if generate_dataset:
-        catalogue_geysers_full = pd.read_csv('../data/catalogue.csv')
 
-        selected_data = catalogue_geysers_full[(catalogue_geysers_full['Latitude'] >= geo_bound['lat_min']) &
-                                               (catalogue_geysers_full['Latitude'] <= geo_bound['lat_max']) &
-                                               (catalogue_geysers_full['Longitude'] >= geo_bound['long_min']) &
-                                               (catalogue_geysers_full['Longitude'] <= geo_bound['long_max'])]
+        # Load catalogue
+        df_catalogue_full = pd.read_csv('../data/catalogue.csv', index_col=[0])
 
-        catalogue_geysers_indexed = data_preparation.index_cubes(selected_data, geo_bound,
-                                                                 step_l=geo_bound['step_l'],
-                                                                 step_d=geo_bound['step_d'])
+        # Reduce the catalogue to the area of interest and index cube nodes with lat_id, long_id, depth_id
+        catalogue = data_preparation.Catalogue(df_catalogue_full, geo_bound)
+        catalogue.index_cubes()
+        df_catalogue = catalogue.reduced_catalogue
 
-        catalogue_geysers = data_preparation.compile_dataset(catalogue_geysers_indexed)
-
+        # Perform aggregation based on the cube index
+        df_density = catalogue.compile_dataset()
 
         # Add 1D index to each record of the density dataset
-        lat_max = catalogue_geysers['lat_id'].max()
-        long_max = catalogue_geysers['long_id'].max()
-        catalogue_geysers['index_1D'] = \
-            catalogue_geysers.apply(lambda row: data_preparation.index_1d(row, lat_max, long_max), axis=1)
-        catalogue_geysers = catalogue_geysers.sort_values(by=['index_1D'])
+        catalogue.reduced_catalogue['index_1D'] = \
+            catalogue.reduced_catalogue.apply(lambda row: data_preparation.index_1d(row, geo_bound['lat_max'], geo_bound['long_max']), axis=1)
+        catalogue.reduced_catalogue = catalogue.reduced_catalogue.sort_values(by=['index_1D'])
 
-        catalogue_geysers.to_csv('../data/results_20062016.csv')
+        catalogue.reduced_catalogue.to_csv('../data/reduced_catalogue.csv')
         print('Dataset saved.')
-
-    # Time series generation
-    if load_timeseries:
-        # time_series = data_preparation.time_series(catalogue_geysers)
-        # np.savetxt("../data/time_series_2km.csv", time_series, delimiter=",")
-        time_series = np.array(pd.read_csv('../data/time_series.csv', header=None))
-        print('time_series - dataset loaded.')
 
     # # Load distance matrix
     # with open('../data/distance_matrix_ok.pickle', 'rb') as pickle_file:
@@ -74,53 +59,32 @@ def main(generate_dataset=True, load_timeseries=True, do_clustering=True):
         cluster_labels = pd.read_csv('../data/cluster_labels')
         unique_labels = np.unique(np.array(cluster_labels['cluster']))
 
-    # # Merge results with original DF
-    # catalogue_geysers = pd.read_csv('../data/results_20062016.csv')
-    # catalogue_geysers_clustered = catalogue_geysers.merge(cluster_labels, left_on='index_1D', right_index=True)
-    # catalogue_geysers_clustered.to_csv('../data/full_results_new_matrix.csv')
 
-    df_catalogue = pd.read_csv('../data/reduced_catalogue_clustered.csv', index_col=[0])
-    print('catalogue_geysers_clustered - dataset loaded.')
+    # Load files for plotting 
 
-    # bvalue_means, bvalue_stds = data_preparation.b_value_error(df_catalogue)
-    #
-    # print(f'Mean b-value over iterations: {bvalue_means}')
-    # print(f'B-value error over iterations: {bvalue_stds}')
-    #
-    # plt.errorbar([3, 4, 5], bvalue_means, yerr=bvalue_stds, marker='D', markersize=5, linestyle='None')
-    # plt.xticks([3, 4, 5], [f'Cluster {item}' for item in [3, 4, 5]])
-    # plt.yticks([0.0, 0.5, 1.0, 1.5, 2.0])
-    # plt.show()
+    folder_path_mauro = r'../for_mauro'
+
+    wells = np.loadtxt(os.path.join(folder_path_mauro, 'Wells_bentz.txt'))
+    coulomb_max = np.loadtxt(os.path.join(folder_path_mauro, 'coulomb_max.txt'))
+    time_series = np.array(pd.read_csv('../data/time_series.csv', header=None))
+    df_reduced_catalogue = pd.read_csv('../data/reduced_catalogue_clustered.csv', index_col=[0])
+    df_density_summary = pd.read_csv(os.path.join(folder_path_mauro, 'full_results_new_matrix.csv'), index_col=[0])
+    ics = pd.read_csv(os.path.join(folder_path_mauro, 'ICs.csv'), index_col=[0])
+
+    print('datasets loaded')
 
 
-    # for index, file in enumerate(os.listdir('../data/ffts')):
-    #     fft = np.loadtxt(os.path.join('../data/ffts', file))
-    #     x_lr = -np.log10(1 * np.arange(0, len(fft))[1:] / (2 * len(fft)))
-    #     y_lr = np.log10(fft[1:])
-    #     plt.plot(x_lr, y_lr, label=f"FFT {index}")
+    # plotting_geo.plot_means_subplots(time_series, cluster_labels)
+    # b_values = plotting_geo.b_values(df_reduced_catalogue, mag_borders = [1.7, 3], plotted_clusters=[3, 4, 5])  
+    # plotting_geo.plot_cluster_nodes(df_reduced_catalogue, df_density_summary, wells)
 
-    #     lin_reg = linregress(x_lr, y_lr)
-    #     print(f"Slope for fft of IC{index+1} is equal {lin_reg.slope}")
+    # coulomb_max_txt, density data instead of reduced catalogue
+    # plotting_geo.coulomb(df_reduced_catalogue, coulomb_max, plotted_clusters = [3,4,5])
+    # ICA, water injections
+    # plotting_geo.ICA(ICA_FFT_plot=True, ICA_plot=True)
 
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.show()
-
-
-    n_clust=np.arange(3, 11, 1)
-    silhuette = [0.41, 0.1675, 0.4477, 0.439, 0.425084, 0.341536, 0.335546, 0.333744]
-
-    fig_bar = plt.bar(n_clust, silhuette, width = 0.95, color='#a7c8e2')
-    plt.grid(visible=True, axis='y', alpha=0.3, which='major', c='#dbdbdb')
-    plt.ylabel('Silhouette coefficient')
-    plt.xlabel('Number of clusters')
-    plt.tight_layout
-    plt.show()
-
-    plotting_geo.plot_means_subplots(time_series, cluster_labels)
-
-
-
+    #timeseries, fullresuls, reduced catalogue, ics, wells
+    plotting_geo.cc_plots(geo_bound, df_reduced_catalogue, df_density_summary, time_series, ics, wells)
 
 if __name__ == '__main__':
-    main(do_clustering=False, load_timeseries=True, generate_dataset=False)
+    main(do_clustering=False, generate_dataset=False)

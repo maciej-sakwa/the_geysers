@@ -1,54 +1,16 @@
+import logging
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
 
 
-"""
-This library contains functions used in preparation of datasets used for The Geysers activity. The functions are:
-    - density_calculation - deprecated function
-    - index_cubes - find the cube (x,y,z) coordinates indexes for all entries in pandas dataset
-    - find_closest - find the closest value (or index) from a sorted dataset
-    - compile_dataset - compiles the density dataset
-    - index_1d
-    - time_series
-
-"""
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S')
+log = logging.getLogger('data_prep')
+log.setLevel(logging.DEBUG)
 
 
-
-def index_cubes(dataset, geo_bound, step_l, step_d):
-    """
-    Add x,y,z (Latitude, Longitude, Depth) cube indices to the dataset column, based on the determined step
-
-    :param dataset: pandas DF; catalogue geysers file
-    :param geo_bound: dictionary; geometric boundaries
-    :param step_l: latitude and longitude step
-    :param step_d: depth step
-    :return:
-    """
-
-    # Preparation of the cube grid [min, max+step, step]
-    lat_range = np.arange(geo_bound['lat_min'], geo_bound['lat_max'] + step_l, step_l)
-    long_range = np.arange(geo_bound['long_min'], geo_bound['long_max'] + step_l, step_l)
-    depth_range = np.arange(geo_bound['depth_min'], geo_bound['depth_max'] + step_d, step_d)
-
-    # Adding cube x,y,z indexes to the dataframe
-
-    dataset['lat_id'] = dataset.apply(lambda row: find_closest_ind(lat_range, row, "Latitude"), axis=1)
-    dataset['long_id'] = dataset.apply(lambda row: find_closest_ind(long_range, row, "Longitude"), axis=1)
-    dataset['depth_id'] = dataset.apply(lambda row: find_closest_ind(depth_range, row, r"Depth"), axis=1)
-    return dataset
-
-
-def find_closest_ind(array, row, col_id):
-    """
-    Find the closest lower value in a sorted array (possibly there is an easier way to do it)
-
-    :param array: array to search (sorted)
-    :param row: df row to use
-    :param col_id: column name to search for the value
-    :return: array value
-    """
+def find_closest_ind(array:np.ndarray, row:pd.Series, col_id:int) -> int:
 
     for i in range(len(array)):
         if i + 1 == len(array):
@@ -61,47 +23,8 @@ def find_closest_ind(array, row, col_id):
     return float('NaN')
 
 
-def compile_dataset(dataset):
-    """
-    Compile density dataset based on indexed dataset
-
-    :param dataset: Dataset with location indexes from index_cubes
-    :return: Density dataset
-    """
-    # Find all time steps
-    year = dataset.year.unique()
-    month = dataset.month.unique()
-
-    # Final dataset preallocation
-    dataset_full = pd.DataFrame()
-
-    # Create an aggregated dataframe for each month
-    for y in year:
-        print("Calculating year: " + str(y))
-        for m in month:
-            print("Month " + str(m))
-            # Extract exact month data
-            dataset_month = dataset[(dataset.year == y) & (dataset.month == m)]
-
-            # Data aggregation by location indexes - Magnitude count (density) and mean is found
-            dataset_loc = dataset_month.groupby(['lat_id', 'long_id', 'depth_id'])['Magnitude'].agg(
-                ['count', 'mean', 'max', 'min'])
-
-            # Dataframe tidy up
-            dataset_reset = dataset_loc.reset_index()
-            time = {'year': y, 'month': m}
-            dataset_reset = dataset_reset.assign(**time)
-
-            # Concat
-            dataset_full = pd.concat([dataset_full, dataset_reset], ignore_index=True)
-
-    dataset_full = dataset_full.rename(
-        columns={'count': 'density', 'mean': 'mag_mean', 'max': 'mag_max', 'min': 'mag_min'})
-
-    return dataset_full
-
-
-def index_1d(row, max_lat, max_long):
+def index_1d(row:pd.Series, max_lat:int, max_long:int) -> int:
+    
     """
     Adds a 1D index for a gicen row based on the dimensions of the dataset
     :param row: Pandas DF row
@@ -109,6 +32,7 @@ def index_1d(row, max_lat, max_long):
     :param max_long: max longitude in the dataset
     :return: index
     """
+
     # Extract data
     lat_id = row['lat_id']
     long_id = row['long_id']
@@ -118,98 +42,190 @@ def index_1d(row, max_lat, max_long):
     return int(lat_id + max_lat * long_id + max_lat * max_long * depth_id)
 
 
-def time_series(density_dataset):
-    """
-    Create a time series array based on generated density dataset
-    :param density_dataset: The indexed density dataset
-    :return: Time series
-    """
-    lat_max = density_dataset['lat_id'].max()
-    long_max = density_dataset['long_id'].max()
+class Catalogue:
+    def __init__(self, catalogue, geo_bounds):
+        self.catalogue = catalogue
+        self.geo_bounds = geo_bounds
+        self.reduced_catalogue = self.catalogue[(self.catalogue['Latitude'] >= self.geo_bounds['lat_min']) &
+                                               (self.catalogue['Latitude'] <= self.geo_bounds['lat_max']) &
+                                               (self.catalogue['Longitude'] >= self.geo_bounds['long_min']) &
+                                               (self.catalogue['Longitude'] <= self.geo_bounds['long_max'])].copy()
+        
+        
+        # Define the bins [min, max+step, step]
+        self.lat_range = np.arange(self.geo_bounds['lat_min'], self.geo_bounds['lat_max'] + self.geo_bounds['step_l'], self.geo_bounds['step_l'])
+        self.long_range = np.arange(self.geo_bounds['long_min'], self.geo_bounds['long_max'] + self.geo_bounds['step_l'], self.geo_bounds['step_l'])
+        self.depth_range = np.arange(self.geo_bounds['depth_min'], self.geo_bounds['depth_max'] + self.geo_bounds['step_d'], self.geo_bounds['step_d'])
+    
+    def __getitem__(self, index):
+        return self.reduced_catalogue.iloc[index, :].copy()
 
-    density_dataset['index_1D'] = density_dataset.apply(lambda row: index_1d(row, lat_max, long_max), axis=1)
-    density_dataset['month_id'] = density_dataset.apply(lambda row: int((row.year - 2006) * 12 + row.month), axis=1)
-    print(density_dataset['month_id'].max())
-    max_id = density_dataset['index_1D'].max()
-    min_id = density_dataset['index_1D'].min()
 
-    # preallocation of results - in the output array each row corresponds to one cube, and each columt to one month
-    result = np.zeros((density_dataset['index_1D'].max() + 1, density_dataset['month_id'].max()))
+    def __del__(self):
+        logging.warning('Instance destroyed')
 
-    for i in range(max_id):
-        print(str(i))
+    def index_cubes(self) -> None:
+        """
+        Add x,y,z (Latitude, Longitude, Depth) cube indices to the dataset column, based on the determined step
+        """
+        logging.info('Indexing cubes...')
+        # Adding cube x,y,z indexes to the dataframe
+        self.reduced_catalogue['lat_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.lat_range, row, "Latitude"), axis=1)
+        self.reduced_catalogue['long_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.long_range, row, "Longitude"), axis=1)
+        self.reduced_catalogue['depth_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.depth_range, row, r"Depthkm"), axis=1)
+        
+        return
 
-        # Skip loop if there is no density in given cube
-        if density_dataset[density_dataset['index_1D'] == i] is None:
-            continue
+    def compile_dataset(self):
+        """
+        Compile density dataset based on indexed dataset
+        :return: Density dataset
+        """
+        logging.info('Compiling density dataset...')
+        # Find all time steps
+        year = self.reduced_catalogue.year.unique()
+        month = self.reduced_catalogue.month.unique()
 
-        selected_data = density_dataset[density_dataset['index_1D'] == i]
+        # Final dataset preallocation
+        df_density = pd.DataFrame()
 
-        for ii in range(density_dataset['month_id'].max()):
+        # Create an aggregated dataframe for each month
+        for y in year:
+            for m in month:
+                logging.debug(f"Calculating month: {m}/{y}")
+                # Extract exact month data
+                dataset_month = self.reduced_catalogue[(self.reduced_catalogue.year == y) & (self.reduced_catalogue.month == m)]
 
-            if selected_data[selected_data['month_id'] == ii].empty:
+                # Data aggregation by location indexes - Magnitude count (density) and mean is found
+                dataset_loc = dataset_month.groupby(['lat_id', 'long_id', 'depth_id'])['Magnitude'].agg(
+                    ['count', 'mean', 'max', 'min']).reset_index()
+
+                # Dataframe tidy up
+                time = {'year': y, 'month': m}
+                dataset_loc = dataset_loc.assign(**time)
+
+                # Concat
+                df_density = pd.concat([df_density, dataset_loc], ignore_index=True)
+
+        logging.info('Density dataset compiled')
+        self.df_density = df_density.rename(
+            columns={'count': 'density', 'mean': 'mag_mean', 'max': 'mag_max', 'min': 'mag_min'})
+
+        return self.df_density
+    
+
+    #paste clustering here
+    def time_series(self):
+        """
+        Create a time series array based on generated density dataset
+        :param density_dataset: The indexed density dataset
+        :return: Time series
+        """
+        lat_max = max(self.lat_range)
+        long_max = max(self.long_range)
+
+        self.df_density['index_1D'] = self.df_density.apply(lambda row: index_1d(row, lat_max, long_max), axis=1)
+        self.df_density['month_id'] = self.df_density.apply(lambda row: int((row.year - 2006) * 12 + row.month), axis=1)
+
+        # preallocation of results - in the output array each row corresponds to one cube, and each columt to one month
+        result = np.zeros((len(self.lat_range)*len(self.long_range)*len(self.depth_range), self.df_density['month_id'].max()))
+
+        for i in range(self.df_density['index_1D'].max()):
+            logging.debug(f"Time series: {i}")
+
+            # Skip loop if there is no density in given cube
+            if self.df_density[self.df_density['index_1D'] == i] is None:
                 continue
-            else:
-                month_data = selected_data[selected_data['month_id'] == ii]
 
-                result[i, ii] = month_data.iloc[0, 4]
-    result = result.astype('int32')
+            selected_data = self.df_density[self.df_density['index_1D'] == i]
 
-    return result
+            for ii in range(self.df_density['month_id'].max()):
+
+                if selected_data[selected_data['month_id'] == ii].empty:
+                    continue
+                else:
+                    month_data = selected_data[selected_data['month_id'] == ii]
+
+                    result[i, ii] = month_data.iloc[0, 4]
+        
+        self.time_series = result.astype('int32')
+
+        return self.time_series
+    
+    
+    
+    
+    def perform_hac(matrix, method='ward', threshold=0.15, n_cluster=5, criterion='distance'):
+        """
+        Perform HAC clustering with scipy algorithm based on the distance matrix
+        """
 
 
-def b_value_error(df_catalogue):
-    """
-    Calculates b-value means and std error for the chosen clusters
+        cond_matrix = distance.squareform(matrix)
+        Z = hierarchy.linkage(cond_matrix, method=method)
+        # threshold_dist = np.amax(hierarchy.cophenet(Z)) * threshold
+        # labels = hierarchy.fcluster(Z, t=threshold_dist, criterion=criterion)
+        labels = hierarchy.fcluster(Z, t=n_cluster, criterion=criterion)
 
-    :param df_catalogue: the geysers catalogue with cluster labels
-    """
+        # Clustering scores
+        # ch = calinski_harabasz_score(cond_matrix, labels)
+        sil = silhouette_score(matrix, labels)
+        print("Score: {}".format(sil))
+
+        return labels, Z
 
 
-    # Bins and clusters definitions
-    bin_size = 0.2
-    clusters = [3, 4, 5]
-    bins = np.arange(-1, 5, bin_size)
-    bin_labels = [f'{item: .1f}' for item in bins]
+    def b_value_error(self, mag_borders=(1.8, 3.0)):
+        """
+        Calculates b-value means and std error for the chosen clusters with bootstraping
+        :param df_catalogue: the geysers catalogue with cluster labels
+        """
 
-    # Result bins
-    slope_means = []
-    slope_stds = []
-
-    for item in clusters:
+        # Bins and clusters definitions
+        bin_size = 0.2
+        clusters = [3, 4, 5]
+        bins = np.arange(-1, 5, bin_size)
+        bin_labels = [f'{item: .1f}' for item in bins]
 
         # Result bins
-        slopes = []
+        slope_means = []
+        slope_stds = []
 
-        # Filter the catalogue for the Earthquakes belonging to chosen cluster
-        df_filtered = df_catalogue.query(f'cluster == {item}').copy()
-        # Cut the dataset into bins based on the Magnitude, add the bin label as new column (an extract it as np array)
-        magnitudes_filtered = pd.cut(df_filtered['Magnitude'], bins, labels=bin_labels[:-1]).to_numpy()
+        for item in clusters:
 
-        # Bootstrap iterations
-        for i in range(100):
-            # Randomly select the magnitudes with replacement, save as df to use groupby later
-            magnitudes_random = np.random.choice(magnitudes_filtered, size=len(magnitudes_filtered), replace=True)
-            df_magnitudes_random = pd.DataFrame(magnitudes_random, columns=['Mag_dist'])
+            # Result bins
+            slopes = []
 
-            # Create a logarithmic distribution
-            log_distribution = np.log10(df_magnitudes_random.groupby(['Mag_dist'])['Mag_dist'].count())
+            # Filter the catalogue for the Earthquakes belonging to chosen cluster
+            df_filtered = self.reduced_catalogue.query(f'cluster == {item}').copy()
+            # Cut the dataset into bins based on the Magnitude, add the bin label as new column (an extract it as np array)
+            magnitudes_filtered = pd.cut(df_filtered['Magnitude'], bins, labels=bin_labels[:-1]).to_numpy()
 
-            # Calculate slope between 1.6 and 3
-            mag_min = 1.8
-            mag_max = 3.0
+            # Bootstrap iterations
+            for i in range(100):
+                # Randomly select the magnitudes with replacement, save as df to use groupby later
+                magnitudes_random = np.random.choice(magnitudes_filtered, size=len(magnitudes_filtered), replace=True)
+                df_magnitudes_random = pd.DataFrame(magnitudes_random, columns=['Mag_dist'])
 
-            x_lr = np.arange(mag_min, mag_max + bin_size, bin_size)
-            y_lr = log_distribution[int(mag_min / bin_size)-1: int(mag_max / bin_size)].to_numpy()
-            lin_reg = linregress(x=x_lr, y=y_lr)
+                # Create a logarithmic distribution
+                log_distribution = np.log10(df_magnitudes_random.groupby(['Mag_dist'])['Mag_dist'].count())
 
-            slopes.append(-lin_reg.slope)
+                x_lr = np.arange(mag_borders[0], mag_borders[1] + bin_size, bin_size)
+                y_lr = log_distribution[int(mag_borders[0] / bin_size)-1: int(mag_borders[1] / bin_size)].to_numpy()
+                lin_reg = linregress(x=x_lr, y=y_lr)
 
-        # Save results
-        slope_means.append(np.mean(slopes))
-        slope_stds.append(np.std(slopes))
+                slopes.append(-lin_reg.slope)
 
-    return slope_means, slope_stds
+            # Save results
+            slope_means.append(np.mean(slopes))
+            slope_stds.append(np.std(slopes))
+
+        return slope_means, slope_stds
+
+    
+
+
+
 
 
 
