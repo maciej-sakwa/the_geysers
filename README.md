@@ -14,6 +14,9 @@ Starting form the original earthquake dataset (acquired courtesy of Calpine and 
 
 The result of this research activity will be demonstrated here once the paper is published. 
 
+![image](https://user-images.githubusercontent.com/119458526/232872517-a3fb0029-218f-4612-94e1-7a90693de277.png)
+
+
 ## 4. Credits 
 
 This research activity has been conducted in cooperation with dr Mauro Palo (Universita degli Studi di Napoli Federico II) and prof Emanuele Carlo Giovanni Ogliari (Politecnico di Milano) who both provided necessary scientific background and feedback on the development of the work.
