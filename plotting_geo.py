@@ -374,10 +374,10 @@ def cc_plots(geo_bounds: dict, df_catalogue: pd.DataFrame, df_density: pd.DataFr
     for i, depth in enumerate(depth_max):
 
         axes[i].scatter(wells[:, 0], wells[:, 1], s=20, alpha=0.3, label='Injection wells')
-        axes[i].contour(X_mesh[:-1, :-1], Y_mesh[:-1, :-1], np.log10(histograms_max_cc_depth[i].T), 10, cmap='Greys', alpha=.5)
+        contour = axes[i].contour(X_mesh[1:, 1:]-0.0125, Y_mesh[1:, 1:]-0.0125, np.log10(histograms_max_cc_depth[i].T), 10, cmap='Greys', alpha=.5)
         axes[i].grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
-        axes[i].scatter(np.array(longs_nodes)[np.array(depths_nodes)==depth],
-                                    np.array(lats_nodes)[np.array(depths_nodes)==depth],
+        cc_plot = axes[i].scatter(np.array(longs_nodes)[np.array(depths_nodes)==depth] + 0.0125,
+                                    np.array(lats_nodes)[np.array(depths_nodes)==depth]+ 0.0125,
                                     c = ccs_with_ics[np.array(depths_nodes)==depth, i], 
                                     s=200, cmap='Reds',
                                     vmin=0, vmax=1, 
@@ -387,6 +387,7 @@ def cc_plots(geo_bounds: dict, df_catalogue: pd.DataFrame, df_density: pd.DataFr
         axes[i].set_ylabel('Latitude')
         axes[i].legend(loc="upper right")
         axes[i].set_title(plot_titles[i])
+        fig.colorbar(contour)
 
     # Ax settings
     axes[0].set_ylim(38.7, 38.9)
@@ -397,7 +398,7 @@ def cc_plots(geo_bounds: dict, df_catalogue: pd.DataFrame, df_density: pd.DataFr
     axes[0].set_yticklabels(["38.7", "", "38.8", "", "38.9"])
 
 
-    # fig.colorbar(cc_plot, ax=axes[2])
+    fig.colorbar(cc_plot, ax=axes[2])
     plt.tight_layout()
     plt.show()
 

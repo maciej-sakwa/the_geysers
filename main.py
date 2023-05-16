@@ -1,10 +1,10 @@
 import os
+import pickle
 from typing import Any, List, Union
 
 import numpy as np
 import pandas as pd
 
-import clustering
 import data_preparation
 import plotting_geo
 
@@ -45,12 +45,13 @@ def main(generate_dataset=True, do_clustering=True):
         print('Dataset saved.')
 
     # # Load distance matrix
-    # with open('../data/distance_matrix_ok.pickle', 'rb') as pickle_file:
-    #     mat_distances = pickle.load(pickle_file)
-    #     print('mat_distances - dataset loaded.')
+
 
     # Perform HAC clustering - save results as PD DF
     if do_clustering:
+        with open('../data/distance_matrix_ok.pickle', 'rb') as pickle_file:
+            mat_distances = pickle.load(pickle_file)
+        print('mat_distances - dataset loaded.')
         labels, linkage = clustering.perform_hac(mat_distances, n_cluster=5, criterion='maxclust', method='ward')
         unique_labels = np.unique(labels)
         cluster_labels = pd.DataFrame(data=labels, columns=['cluster'])
