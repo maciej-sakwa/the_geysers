@@ -52,12 +52,12 @@ def main(generate_dataset=True, do_clustering=True):
         with open('../data/distance_matrix_ok.pickle', 'rb') as pickle_file:
             mat_distances = pickle.load(pickle_file)
         print('mat_distances - dataset loaded.')
-        labels, linkage = clustering.perform_hac(mat_distances, n_cluster=5, criterion='maxclust', method='ward')
+        labels, linkage = data_preparation.perform_hac(mat_distances, n_cluster=5, criterion='maxclust', method='ward')
         unique_labels = np.unique(labels)
         cluster_labels = pd.DataFrame(data=labels, columns=['cluster'])
         cluster_labels.to_csv('../data/cluster_labels.csv')
     else:
-        cluster_labels = pd.read_csv('../data/cluster_labels')
+        cluster_labels = pd.read_csv('../data/the_geysers/cluster_labels', index_col = [0])
         unique_labels = np.unique(np.array(cluster_labels['cluster']))
 
 
@@ -67,17 +67,26 @@ def main(generate_dataset=True, do_clustering=True):
 
     wells = np.loadtxt(os.path.join(folder_path_mauro, 'Wells_bentz.txt'))
     coulomb_max = np.loadtxt(os.path.join(folder_path_mauro, 'coulomb_max.txt'))
-    time_series = np.array(pd.read_csv('../data/time_series.csv', header=None))
-    df_reduced_catalogue = pd.read_csv('../data/reduced_catalogue_clustered.csv', index_col=[0])
+    time_series = np.array(pd.read_csv('../data/the_geysers/time_series.csv', header=None))
+    df_reduced_catalogue = pd.read_csv('../data/the_geysers/reduced_catalogue_clustered.csv', index_col=[0])
     df_density_summary = pd.read_csv(os.path.join(folder_path_mauro, 'full_results_new_matrix.csv'), index_col=[0])
     ics = pd.read_csv(os.path.join(folder_path_mauro, 'ICs.csv'), index_col=[0])
+    water_injections = pd.read_csv(r"..\data\the_geysers\water_injecion_GLOBAL.csv", names=['date', 'injection'])
+    water_injections['year'] = water_injections.apply(lambda row: row.date[-4:], axis=1)
+    water_injections['month'] = water_injections.apply(lambda row: row.date[4:6], axis=1)
+
+    df_labels = pd.read_csv('../data/the_geysers/cluster_labels', index_col = [0])
+    cluster_labels = np.array([i[0] for i in df_labels.values])
+    unique_labels = np.sort(np.unique(cluster_labels))
+
 
     print('datasets loaded')
 
 
-    # plotting_geo.plot_means_subplots(time_series, cluster_labels)
+    # plotting_geo.plot_means_subplots(time_series, cluster_labels = [item for item in cluster_labels.values.T[0]], plotted_clusters = [1, 2])
     # b_values = plotting_geo.b_values(df_reduced_catalogue, mag_borders = [1.7, 3], plotted_clusters=[3, 4, 5])  
-    # plotting_geo.plot_cluster_nodes(df_reduced_catalogue, df_density_summary, wells)
+    # plotting_geo.plot_cluster_nodes(df_reduced_catalogue, df_density=df_density_summary, geo_bounds=geo_bound, wells=wells, plotted_clusters=[3, 4, 5])
+    plotting_geo.dth_fft(time_series, cluster_labels, plotted_clusters=[3, 4, 5], injections = water_injections)
 
     # coulomb_max_txt, density data instead of reduced catalogue
     # plotting_geo.coulomb(df_reduced_catalogue, coulomb_max, plotted_clusters = [3,4,5])
@@ -85,7 +94,7 @@ def main(generate_dataset=True, do_clustering=True):
     # plotting_geo.ICA(ICA_FFT_plot=True, ICA_plot=True)
 
     #timeseries, fullresuls, reduced catalogue, ics, wells
-    plotting_geo.cc_plots(geo_bound, df_reduced_catalogue, df_density_summary, time_series, ics, wells)
+    #plotting_geo.cc_plots(geo_bound, df_reduced_catalogue, df_density_summary, time_series, ics, wells)
 
 if __name__ == '__main__':
     main(do_clustering=False, generate_dataset=False)

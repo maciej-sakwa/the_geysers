@@ -12,26 +12,26 @@ colors = ['#5DADE2', '#52BE80', '#CD6155']
 
 
 # Updated
-def plot_means_subplots(time_series:np.ndarray, cluster_labels:list) -> None:
+def plot_means_subplots(time_series:np.ndarray, cluster_labels:list, plotted_clusters:list) -> None:
 
     # Parameters and label definitions
     mpl.rcParams['font.size'] = 14
-    arr_labels = np.array(cluster_labels['cluster'])
-    clusters = [3, 4, 5]
-    legend_labels = ['DTH-3', 'DTH-3', 'DTH-5']
+    arr_labels = np.array(cluster_labels)
+    legend_labels = [f'DTH-{i}' for i in plotted_clusters]
     years = np.arange(2006, 2017, 1)
     tick_labels = [f'\'{item[-2:]}' for item in map(str, years)]
     i = 0
     x = range(time_series.shape[1])
 
     # Plot definition
-    fig, axs = plt.subplots(3)
-    for cluster, ax in zip(clusters, axs.ravel()):
+    fig, axs = plt.subplots(len(plotted_clusters))
+    for cluster, ax in zip(plotted_clusters, axs.ravel()):
         # Normalization and mean calculation
         time_extract = time_series[arr_labels == cluster]
         time_extract_norm = time_extract.T / np.max(time_extract, axis=1)
         time_norm = np.average(time_extract_norm.T, axis=0)
-        std = np.std(time_extract_norm.T, axis=0)
+        std = np.std(time_extract_norm.T, axis=0) / np.sqrt(np.shape(time_extract)[0])
+    
 
         # Mean and STD plots with fill between
         ax.plot(time_norm, label='{}'.format(legend_labels[i]), c='k')
@@ -47,9 +47,9 @@ def plot_means_subplots(time_series:np.ndarray, cluster_labels:list) -> None:
         ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
         i += 1
 
-    axs[0].set_yticks([0, 0.2])
-    axs[1].set_yticks([0, 0.5])
-    axs[2].set_yticks([0, 0.5])
+    # axs[0].set_yticks([0, 0.2])
+    # axs[1].set_yticks([0, 0.5])
+    # axs[2].set_yticks([0, 0.5])
     # Plot area settings
     fig.supylabel('Normalized density [p.u.]')
     fig.set_size_inches(8, 7.5)
@@ -162,9 +162,9 @@ def ICA(folder_path = r'C:\Users\macie\Desktop\Fellowship\The Geysers\code\for_m
         tick_labels = [str(item) if "1" in str(item) else "" for item in ticks]
         log_10_ticks = np.log10(ticks)
         plt.xticks(log_10_ticks, tick_labels)
-        plt.yticks([-0.5, 0, 0.5, 1, 1.5, 2], labels=["", "1", "", "10", "", "100"])
+        plt.yticks([-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2], labels=["", "0.1", "", "1", "", "10", "", "100"])
         plt.xlim([-2.25, -0.25])
-        plt.ylim([-0.5, 2])
+        plt.ylim([-1.5, 2])
         plt.xlabel('Frequency [1/m]')
         plt.ylabel('Fast Fourier Transform')
         plt.legend(loc='lower left')
@@ -177,13 +177,14 @@ def ICA(folder_path = r'C:\Users\macie\Desktop\Fellowship\The Geysers\code\for_m
 
 
 # Check alignment
-def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame, wells:np.ndarray, plotted_clusters:list = [3,4,5]) -> None:
+def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  geo_bounds: dict, wells:np.ndarray = None, plotted_clusters:list = [3,4,5]) -> None:
 
     # Add a final element at the end of each file
-    x_contour = np.append(np.sort(np.unique(df_density.long)),np.sort(np.unique(df_density.long))[-1]+0.025)
-    y_contour = np.append(np.sort(np.unique(df_density.lat)),np.sort(np.unique(df_density.lat))[-1]+0.025)
-    z_contour = -np.append(np.sort(np.unique(df_density.depth)),np.sort(np.unique(df_density.depth))[-1]+0.25)
-    
+    x_contour = np.arange(geo_bounds['long_min'], geo_bounds['long_max'] + geo_bounds['step_l'], geo_bounds['step_l'])
+    y_contour = np.arange(geo_bounds['lat_min'], geo_bounds['lat_max'] + geo_bounds['step_l'], geo_bounds['step_l'])
+    z_contour = - np.arange(geo_bounds['depth_min'], geo_bounds['depth_max'] + geo_bounds['step_d'], geo_bounds['step_d'])
+
+
     x_cat = df_catalogue['Longitude']
     y_cat = df_catalogue['Latitude']
     z_cat = df_catalogue['Depth']
@@ -196,16 +197,17 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame, wells
 
     # Setup the plot
     mpl.rcParams['font.size'] = 14
-    fig, axes = plt.subplots(nrows=2, ncols=3, 
-                             figsize=(17, 9), sharey='row',
-                             gridspec_kw={'width_ratios': [1, 1, 1], "height_ratios":[1, 0.9]})
+    fig, axes = plt.subplots(nrows=2, ncols=len(plotted_clusters), 
+                             figsize=(len(plotted_clusters)*5 + 1, 9), sharey='row',
+                             gridspec_kw={'width_ratios': [1, 1, 1.2], "height_ratios":[1, 0.9]})
     
-    columns = ['Domain C', 'Domain B', 'Domain A']
+    columns = [f'Cluster {item}' for item in plotted_clusters]
 
     # loop over the cluster
     for i, cl in enumerate(plotted_clusters):
 
         sub_df_catalogue = df_catalogue[df_catalogue.cluster == cl].copy()
+        sub_df_density = df_density[df_density.cluster == cl].copy()
         sequence_x_vals = sub_df_catalogue.Longitude
         sequence_y_vals = sub_df_catalogue.Latitude
         sequence_z_vals = sub_df_catalogue.Depth
@@ -216,11 +218,21 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame, wells
         X, Y = np.meshgrid(xedges, yedges)
         X1, Z = np.meshgrid(xedges, zedges)
 
+        # Findint the highest value
+        max_value_array = sub_df_density.groupby(['index_1D'])['density'].max().values
+        max_value_index_array = sub_df_density.groupby(['index_1D'])['density'].max().index.to_numpy()
+        max_value_index = np.argmax(max_value_array)
+
+        # Convert the coordinates to list
+        max_value_coords = sub_df_density[sub_df_density.index_1D == max_value_index_array[max_value_index]][['lat', 'long']].mean().to_list()
+
 
         # Lat-long graph
-        axes[0, i].contour(X_cat[:-1, :-1]+.0125, Y_cat[:-1, :-1]+.0125, np.log10(H_cat.T), 15, cmap='Greys')
-        plot_latlong = axes[0, i].contourf(X[:-1, :-1]+.0125, Y[:-1, :-1]+.0125, H.T, 10, cmap='Reds')
-        axes[0, i].scatter(wells[:, 0]+.0125, wells[:, 1]-.0125, s=20, label='Injection Wells')
+        axes[0, i].contour(X_cat[:-1, :-1]+(geo_bounds['step_l']/2), Y_cat[:-1, :-1]+(geo_bounds['step_l']/2), np.log10(H_cat.T), 15, cmap='Greys', alpha = 0.5)
+        plot_latlong = axes[0, i].contourf(X[:-1, :-1]+(geo_bounds['step_l']/2), Y[:-1, :-1]+(geo_bounds['step_l']/2), H.T, 10, cmap='Reds')
+        if wells is not None:
+            axes[0, i].scatter(wells[:, 0]+(geo_bounds['step_l']/2), wells[:, 1]-(geo_bounds['step_l']/2), s=20, label='Injection Wells')
+        axes[0, i].scatter(x=max_value_coords[1]+(geo_bounds['step_l']/2), y=max_value_coords[0]+(geo_bounds['step_l']/2), s=50, marker='1', c='#18edd4', label = 'Max. density')
 
         # Visuals 
         axes[0, i].set_xlabel('Longitude')
@@ -233,9 +245,9 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame, wells
 
 
         # Depth-long graph
-        axes[1, i].contour(X_cat_depth[:-1, :-1]+.0125, Z_cat_depth[:-1, :-1]+0.125, np.log10(H_cat_depth.T), 15,
+        axes[1, i].contour(X_cat_depth[:-1, :-1]+(geo_bounds['step_l']/2), Z_cat_depth[:-1, :-1]+(geo_bounds['step_d']/2), np.log10(H_cat_depth.T), 15,
                            cmap='Greys')
-        plot_longdepth = axes[1, i].contourf(X1[:-1, :-1]+.0125, Z[:-1, :-1]+.125, Hz.T, 10, cmap='Reds')
+        plot_longdepth = axes[1, i].contourf(X1[:-1, :-1]+(geo_bounds['step_l']/2), Z[:-1, :-1]+(geo_bounds['step_d']/2), Hz.T, 10, cmap='Reds')
 
         # Visuals 
         axes[1, i].set_xlabel('Longitude')
@@ -244,8 +256,8 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame, wells
         axes[1, i].set_xticklabels(["-122.9", "", "-122.8", "", "-122.7", ""])
         axes[1, i].grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
 
-        fig.colorbar(plot_latlong, ax=axes[0, i])
-        fig.colorbar(plot_longdepth, ax=axes[1, i])
+    fig.colorbar(plot_latlong, ax=axes[0, i])
+    fig.colorbar(plot_longdepth, ax=axes[1, i])
 
     # Ax settings
     axes[0, 0].set_ylabel('Latitude')
@@ -423,3 +435,43 @@ def cc_plots(geo_bounds: dict, df_catalogue: pd.DataFrame, df_density: pd.DataFr
 
 
     return
+
+
+
+def dth_fft(time_series:np.ndarray, cluster_labels:list, plotted_clusters:list, injections: pd.DataFrame) -> None:
+
+    # Parameters definitions
+    arr_labels = np.array(cluster_labels)
+
+    y_fft_water = injections['injection'].to_numpy()/injections['injection'].max()
+    x_fft = np.fft.fftfreq(np.shape(time_series)[1], 1)
+    plt.figure(figsize=(8, 4))
+
+    for i, cluster in enumerate(plotted_clusters):
+
+        # Normalization and mean calculation
+        time_extract = time_series[arr_labels == cluster]
+        time_extract_norm = time_extract.T / np.max(time_extract, axis=1)
+        time_norm = np.average(time_extract_norm.T, axis=0)
+        
+        plt.plot(np.log10(x_fft[1:len(time_norm)//2]), np.log10(np.abs(np.fft.fft(time_norm)[1:len(time_norm)//2])),
+                    c=colors[i], label=f'FFT of DTH-{cluster}')
+        
+    # Injections
+    plt.plot(np.log10(x_fft[1:len(y_fft_water)//2]), np.log10(np.abs(np.fft.fft(y_fft_water)[1:len(y_fft_water)//2])),
+                    c='k', label='Monthly injections', linestyle='dashed')
+    
+    # Visuals
+    ticks = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+    tick_labels = [str(item) if "1" in str(item) else "" for item in ticks]
+    log_10_ticks = np.log10(ticks)
+    plt.xticks(log_10_ticks, tick_labels)
+    plt.yticks([-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2], labels=["", "0.01", "", "0.1", "", "1", "", "10", "", "100"])
+    plt.xlim([-2.25, -0.25])
+    plt.ylim([-2.5, 2])
+    plt.xlabel('Frequency [1/m]')
+    plt.ylabel('Fast Fourier Transform')
+    plt.legend(loc='lower left')
+    plt.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
+    plt.tight_layout()
+    plt.show()
