@@ -29,14 +29,6 @@ def find_closest_ind(array:np.ndarray, row:pd.Series, col_id:int) -> int:
 
 
 def index_1d(row:pd.Series, max_lat:int, max_long:int) -> int:
-    
-    """
-    Adds a 1D index for a gicen row based on the dimensions of the dataset
-    :param row: Pandas DF row
-    :param max_lat: max latitude in the dataset
-    :param max_long: max longitude in the dataset
-    :return: index
-    """
 
     # Extract data
     lat_id = row['lat_id']
@@ -50,10 +42,10 @@ class Catalogue:
     def __init__(self, catalogue, geo_bounds):
         self.df_catalogue = catalogue
         self.geo_bounds = geo_bounds
-        self.reduced_catalogue = self.df_catalogue[(self.df_catalogue['Latitude'] >= self.geo_bounds['lat_min']) &
-                                               (self.df_catalogue['Latitude'] <= self.geo_bounds['lat_max']) &
-                                               (self.df_catalogue['Longitude'] >= self.geo_bounds['long_min']) &
-                                               (self.df_catalogue['Longitude'] <= self.geo_bounds['long_max'])].copy()
+        self.reduced_catalogue = self.df_catalogue[(self.df_catalogue['latitude'] >= self.geo_bounds['lat_min']) &
+                                               (self.df_catalogue['latitude'] <= self.geo_bounds['lat_max']) &
+                                               (self.df_catalogue['longitude'] >= self.geo_bounds['long_min']) &
+                                               (self.df_catalogue['longitude'] <= self.geo_bounds['long_max'])].copy()
         
         
         # Define the bins [min, max+step, step]
@@ -83,9 +75,9 @@ class Catalogue:
         """
         logging.info('Indexing cubes...')
         # Adding cube x,y,z indexes to the dataframe
-        self.reduced_catalogue['lat_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.lat_range, row, "Latitude"), axis=1)
-        self.reduced_catalogue['long_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.long_range, row, "Longitude"), axis=1)
-        self.reduced_catalogue['depth_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.depth_range, row, "Depthkm"), axis=1)
+        self.reduced_catalogue['lat_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.lat_range, row, "latitude"), axis=1)
+        self.reduced_catalogue['long_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.long_range, row, "longitude"), axis=1)
+        self.reduced_catalogue['depth_id'] = self.reduced_catalogue.apply(lambda row: find_closest_ind(self.depth_range, row, "depth"), axis=1)
         
         return
 
@@ -171,8 +163,8 @@ class Catalogue:
         :param density_dataset: The indexed density dataset
         :return: Time series
         """
-        lat_max = max(self.lat_range)
-        long_max = max(self.long_range)
+        lat_max = len(self.lat_range)
+        long_max = len(self.long_range)
 
         logging.info('Adding 1D index...')
         self.df_density['index_1D'] = self.df_density.apply(lambda row: index_1d(row, lat_max, long_max), axis=1)
@@ -198,16 +190,14 @@ class Catalogue:
                 else:
                     month_data = selected_data[selected_data['month_id'] == ii]
 
-                    result[i, ii] = month_data.iloc[0, 4]
+                    result[i, ii] = month_data.iloc[0, 3]
         
         self.time_series_array = result.astype('int32')
         
 
         return self.time_series_array
     
-
-
-    
+  
     def distance_matrix(self, normalization = True):
                
         if self.time_series_array is None:
