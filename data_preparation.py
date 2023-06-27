@@ -155,8 +155,7 @@ class Catalogue:
 
         return self.df_density
     
-
-    #paste clustering here
+    
     def time_series(self):
         """
         Create a time series array based on generated density dataset
@@ -199,7 +198,10 @@ class Catalogue:
     
   
     def distance_matrix(self, normalization = True):
-               
+
+        # cant be just pdist?
+
+
         if self.time_series_array is None:
             raise ValueError('Time series not compiled')
 
@@ -282,7 +284,7 @@ class Catalogue:
         return labels, Z
 
 
-    def b_value_error(self, mag_borders=(1.8, 3.0)):
+    def b_value_error(self, mag_borders=(1.8, 3.0), boot_iter = 100):
         """
         Calculates b-value means and std error for the chosen clusters with bootstraping
         :param df_catalogue: the geysers catalogue with cluster labels
@@ -290,7 +292,7 @@ class Catalogue:
 
         # Bins and clusters definitions
         bin_size = 0.2
-        clusters = [3, 4, 5]
+        clusters = [1]
         bins = np.arange(-1, 5, bin_size)
         bin_labels = [f'{item: .1f}' for item in bins]
 
@@ -306,10 +308,10 @@ class Catalogue:
             # Filter the catalogue for the Earthquakes belonging to chosen cluster
             df_filtered = self.reduced_catalogue.query(f'cluster == {item}').copy()
             # Cut the dataset into bins based on the Magnitude, add the bin label as new column (an extract it as np array)
-            magnitudes_filtered = pd.cut(df_filtered['magnitude'], bins, labels=bin_labels[:-1]).to_numpy()
+            magnitudes_filtered = pd.cut(df_filtered['Magnitude'], bins, labels=bin_labels[:-1]).to_numpy()
 
             # Bootstrap iterations
-            for i in range(100):
+            for i in range(boot_iter):
                 # Randomly select the magnitudes with replacement, save as df to use groupby later
                 magnitudes_random = np.random.choice(magnitudes_filtered, size=len(magnitudes_filtered), replace=True)
                 df_magnitudes_random = pd.DataFrame(magnitudes_random, columns=['Mag_dist'])
@@ -318,7 +320,7 @@ class Catalogue:
                 log_distribution = np.log10(df_magnitudes_random.groupby(['Mag_dist'])['Mag_dist'].count())
 
                 x_lr = np.arange(mag_borders[0], mag_borders[1] + bin_size, bin_size)
-                y_lr = log_distribution[int(mag_borders[0] / bin_size)-1: int(mag_borders[1] / bin_size)].to_numpy()
+                y_lr = log_distribution[int(mag_borders[0] / bin_size) - 1: int(mag_borders[1] / bin_size) +1].to_numpy()
                 lin_reg = linregress(x=x_lr, y=y_lr)
 
                 slopes.append(-lin_reg.slope)

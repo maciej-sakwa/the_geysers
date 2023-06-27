@@ -79,7 +79,7 @@ def b_values(df_catalogue:pd.DataFrame, mag_borders:list, plotted_clusters:list)
 
     mag_cluster = []
     hist_magnitudes = []
-    labels = ['Domain C', 'Domain B', 'Domain A']
+    labels = ['Domain D', 'Domain E']
 
     # magnitudes of the three clusters
     for i, cluster in enumerate(plotted_clusters):
@@ -118,81 +118,7 @@ def b_values(df_catalogue:pd.DataFrame, mag_borders:list, plotted_clusters:list)
     return [b_value_cluster_3, b_value_cluster_4, b_value_cluster_5]
 
 
-# TODO Update function
-def ICA(folder_path = r'C:\Users\macie\Desktop\Fellowship\The Geysers\code\for_mauro',
-        data_folder = r'C:\Users\ws777\Desktop\Fellowship\The Geysers\code\data', 
-        ICA_plot:bool=False, ICA_FFT_plot:bool=False) -> None:
-
-
-    file_ind_components = os.path.join(folder_path, r'ICs.csv')
-    file_water_global = os.path.join(data_folder, r'water_injecion_GLOBAL.csv')
-    ics = np.array(pd.read_csv(file_ind_components, index_col=[0]))
-
-    water_global = pd.read_csv(file_water_global, names=['date', 'injection'])
-    water_global['year'] = water_global.apply(lambda row: row.date[-4:], axis=1)
-    water_global['month'] = water_global.apply(lambda row: row.date[4:6], axis=1)
-    water_yearly_arr = water_global.groupby(['year'])['injection'].sum().to_numpy()
-
-    years = np.arange(2006, 2017, 1)
-    x_water = np.arange(6, 127, 12)
-    water_yearly_arr[-1] = np.average(water_yearly_arr)
-
-    if ICA_plot:
-        fig, ax = plt.subplots(constrained_layout=True, figsize=(8, 4))
-        for i in range(3):
-            ax.plot(ics[:, i], c=colors[i], label=f'IC{i+1}')
-        ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
-
-        ax.set_xlabel('Observation [y]')
-        ax.set_ylabel('Time series [p.u.]')
-        ax.set_ylim([-4, 6])
-        ax.set_yticks([-4, -2, 0, 2, 4, 6])
-        ax.set_yticklabels(['', '-2', '0', '2', '4', ''])
-        ax.set_xticks(np.arange(0, 121, 12))
-        ax.set_xticklabels([f'\'{item[-2:]}' for item in map(str, years)])
-        ax.set_xlim([0, 125])
-        ax_due = ax.twinx()
-        ax_due.plot(0.5*(water_global['injection']/water_global['injection'].mean() - 1), linestyle='dotted',
-                    c='#c7c7c7', label = 'Monthly injections')
-        ax_due.plot(x_water, (water_yearly_arr/np.average(water_yearly_arr)) - 1,
-                    c='k', linestyle="dashed", label='Yearly water injections')
-        ax_due.set_ylim([-0.2, 0.3])
-        ax_due.set_yticks([-0.2, -0.1, 0, 0.1, 0.2, 0.3])
-        ax_due.set_yticklabels(['', '-0.1', '0.0', '0.1', '0.2', ''])
-        ax_due.set_ylabel('Water Injections Normalized [p.u.]')
-        ax.legend(loc='upper left')
-        ax_due.legend(loc='upper right')
-        plt.show()
-
-    if ICA_FFT_plot:
-        y_fft_water = water_global['injection'].to_numpy()
-        x_fft = np.fft.fftfreq(len(ics[:, 0]), 1)
-        plt.figure(figsize=(8, 4))
-        for i in range(3):
-            plt.plot(np.log10(x_fft[1:len(ics[:, i])//2]), np.log10(np.abs(np.fft.fft(ics[:, i])[1:len(ics[:, i])//2])),
-                    c=colors[i], label=f'IC{i + 1}')
-        plt.plot(np.log10(x_fft[1:len(y_fft_water)//2]),
-                np.log10(np.abs(np.fft.fft(y_fft_water)[1:len(y_fft_water)//2])),
-                    c='k', label='Monthly injections', linestyle='dashed')
-        ticks = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-        tick_labels = [str(item) if "1" in str(item) else "" for item in ticks]
-        log_10_ticks = np.log10(ticks)
-        plt.xticks(log_10_ticks, tick_labels)
-        plt.yticks([-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2], labels=["", "0.1", "", "1", "", "10", "", "100"])
-        plt.xlim([-2.25, -0.25])
-        plt.ylim([-1.5, 2])
-        plt.xlabel('Frequency [1/m]')
-        plt.ylabel('Fast Fourier Transform')
-        plt.legend(loc='lower left')
-        plt.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
-        plt.tight_layout()
-        plt.show()
-
-
-    return
-
-
-# Check alignment
+# Updated
 def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_labels:pd.DataFrame, 
                        geo_bounds: dict, wells:np.ndarray = None, plotted_clusters:list = [3,4,5]) -> None:
 
@@ -218,8 +144,8 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
     # Setup the plot
     mpl.rcParams['font.size'] = 14
     fig, axes = plt.subplots(nrows=2, ncols=len(plotted_clusters), 
-                             figsize=(len(plotted_clusters)*5 + 1, 9), sharey='row',
-                             gridspec_kw={'width_ratios': [1, 1, 1], "height_ratios":[1, 1.2]})
+                             figsize=(len(plotted_clusters)*4 + 1, 9), sharey='row',
+                             gridspec_kw={'width_ratios': [1, 1, 1.2], "height_ratios":[1, 1.2]})
     
     columns = ['Domain A', 'Domain B', 'Domain C']
 
@@ -235,6 +161,8 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
     df_nodes['long'] = df_nodes.apply(lambda row: long_range[int(row.long_id)], axis=1)
     df_nodes['lat'] = df_nodes.apply(lambda row: lat_range[int(row.lat_id)], axis=1)
 
+    lat_longs = []
+    dep_longs = []
 
     # loop over the cluster
     for i, cl in enumerate(plotted_clusters):
@@ -276,6 +204,7 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
         # Lat-long graph
         axes[0, i].contour(X_cat[:-1, :-1]+(geo_bounds['step_l']), Y_cat[:-1, :-1], np.log10(H_cat.T), 15, cmap='Greys', alpha = 0.5)
         plot_latlong = axes[0, i].contourf(X[:-1, :-1]+(geo_bounds['step_l']), Y[:-1, :-1], np.log10(H.T), 10, cmap='Reds', vmin = 0, vmax = 6)
+        lat_longs.append(plot_latlong)
         if wells is not None:
             axes[0, i].scatter(wells[:, 0]+(geo_bounds['step_l'])/2, wells[:, 1]-(geo_bounds['step_l'])/2, s=20, label='Injection Wells')
         axes[0, i].scatter(x=max_value_coords[1]+(geo_bounds['step_l']), y=max_value_coords[0], s=100, marker='1', c='#18edd4', label = 'Max. density')
@@ -288,12 +217,14 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
         axes[0, i].set_xticklabels(["-122.9", "", "-122.8", "", "-122.7", ""])
         axes[0, i].grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
         axes[0, i].set_title(f'{columns[i]}')
+        # axes[0, i].set_clim(0, 6)
 
 
         # Depth-long graph
         axes[1, i].contour(X_cat_depth[:-1, :-1]+(geo_bounds['step_l']), Z_cat_depth[:-1, :-1]+(geo_bounds['step_d']), np.log10(H_cat_depth.T), 15,
                            cmap='Greys')
         plot_longdepth = axes[1, i].contourf(X1[:-1, :-1]+(geo_bounds['step_l']), Z[:-1, :-1]+(geo_bounds['step_d']), np.log10(Hz.T), 10, cmap='Reds', vmin = 0, vmax = 6)
+        dep_longs.append(plot_longdepth)
         axes[1, i].scatter(x=max_value_coords[1]+(geo_bounds['step_l']), y=-(max_value_coords[2]-(geo_bounds['step_d']/2)), s=100, marker='1', c='#18edd4', label = 'Max. density')
 
         # Visuals 
@@ -303,8 +234,8 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
         axes[1, i].set_xticklabels(["-122.9", "", "-122.8", "", "-122.7", ""])
         axes[1, i].grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
 
-        fig.colorbar(plot_latlong, ax=axes[0, i])
-        fig.colorbar(plot_longdepth, ax=axes[1, i])
+    fig.colorbar(lat_longs[0], ax=axes[0, i], label='Eq. density [log10]')
+    fig.colorbar(dep_longs[0], ax=axes[1, i], label='Eq. density [log10]')
 
     # Ax settings
     axes[0, 0].set_ylabel('Latitude')
@@ -324,7 +255,7 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
     return
 
 
-
+# Function used just for a single plot of Domain D the same as above but for 1 cluster at a time
 def plot_cluster_nodes_single(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_labels:pd.DataFrame, 
                        geo_bounds: dict, cluster:int, wells:np.ndarray = None) -> None:
 
@@ -489,7 +420,7 @@ def coulomb(df_density:pd.DataFrame, coulomb_stress_ratios: np.ndarray, plotted_
     return
 
 
-# Check alignment
+# Can be discarded in the end (probably)
 def cc_plots(geo_bounds: dict, df_catalogue: pd.DataFrame, df_density: pd.DataFrame, timeseries: np.array, ics: pd.DataFrame, wells:np.ndarray) -> None:
 
     # Add a final element at the end of each file
@@ -744,3 +675,77 @@ def dth_fft(time_series:np.ndarray, cluster_labels:list, plotted_clusters:list, 
         plt.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
         plt.tight_layout()
         plt.show()
+
+
+# TODO Update function
+def ICA(folder_path = r'C:\Users\macie\Desktop\Fellowship\The Geysers\code\for_mauro',
+        data_folder = r'C:\Users\ws777\Desktop\Fellowship\The Geysers\code\data', 
+        ICA_plot:bool=False, ICA_FFT_plot:bool=False) -> None:
+
+
+    file_ind_components = os.path.join(folder_path, r'ICs.csv')
+    file_water_global = os.path.join(data_folder, r'water_injecion_GLOBAL.csv')
+    ics = np.array(pd.read_csv(file_ind_components, index_col=[0]))
+
+    water_global = pd.read_csv(file_water_global, names=['date', 'injection'])
+    water_global['year'] = water_global.apply(lambda row: row.date[-4:], axis=1)
+    water_global['month'] = water_global.apply(lambda row: row.date[4:6], axis=1)
+    water_yearly_arr = water_global.groupby(['year'])['injection'].sum().to_numpy()
+
+    years = np.arange(2006, 2017, 1)
+    x_water = np.arange(6, 127, 12)
+    water_yearly_arr[-1] = np.average(water_yearly_arr)
+
+    if ICA_plot:
+        fig, ax = plt.subplots(constrained_layout=True, figsize=(8, 4))
+        for i in range(3):
+            ax.plot(ics[:, i], c=colors[i], label=f'IC{i+1}')
+        ax.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
+
+        ax.set_xlabel('Observation [y]')
+        ax.set_ylabel('Time series [p.u.]')
+        ax.set_ylim([-4, 6])
+        ax.set_yticks([-4, -2, 0, 2, 4, 6])
+        ax.set_yticklabels(['', '-2', '0', '2', '4', ''])
+        ax.set_xticks(np.arange(0, 121, 12))
+        ax.set_xticklabels([f'\'{item[-2:]}' for item in map(str, years)])
+        ax.set_xlim([0, 125])
+        ax_due = ax.twinx()
+        ax_due.plot(0.5*(water_global['injection']/water_global['injection'].mean() - 1), linestyle='dotted',
+                    c='#c7c7c7', label = 'Monthly injections')
+        ax_due.plot(x_water, (water_yearly_arr/np.average(water_yearly_arr)) - 1,
+                    c='k', linestyle="dashed", label='Yearly water injections')
+        ax_due.set_ylim([-0.2, 0.3])
+        ax_due.set_yticks([-0.2, -0.1, 0, 0.1, 0.2, 0.3])
+        ax_due.set_yticklabels(['', '-0.1', '0.0', '0.1', '0.2', ''])
+        ax_due.set_ylabel('Water Injections Normalized [p.u.]')
+        ax.legend(loc='upper left')
+        ax_due.legend(loc='upper right')
+        plt.show()
+
+    if ICA_FFT_plot:
+        y_fft_water = water_global['injection'].to_numpy()
+        x_fft = np.fft.fftfreq(len(ics[:, 0]), 1)
+        plt.figure(figsize=(8, 4))
+        for i in range(3):
+            plt.plot(np.log10(x_fft[1:len(ics[:, i])//2]), np.log10(np.abs(np.fft.fft(ics[:, i])[1:len(ics[:, i])//2])),
+                    c=colors[i], label=f'IC{i + 1}')
+        plt.plot(np.log10(x_fft[1:len(y_fft_water)//2]),
+                np.log10(np.abs(np.fft.fft(y_fft_water)[1:len(y_fft_water)//2])),
+                    c='k', label='Monthly injections', linestyle='dashed')
+        ticks = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+        tick_labels = [str(item) if "1" in str(item) else "" for item in ticks]
+        log_10_ticks = np.log10(ticks)
+        plt.xticks(log_10_ticks, tick_labels)
+        plt.yticks([-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2], labels=["", "0.1", "", "1", "", "10", "", "100"])
+        plt.xlim([-2.25, -0.25])
+        plt.ylim([-1.5, 2])
+        plt.xlabel('Frequency [1/m]')
+        plt.ylabel('Fast Fourier Transform')
+        plt.legend(loc='lower left')
+        plt.grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
+        plt.tight_layout()
+        plt.show()
+
+
+    return
