@@ -8,14 +8,11 @@ Our hypothesis was that these earthquakes are triggered by a composition of proc
 
 ## 2. Workflow and preliminary results
 
-Starting form the original earthquake dataset (acquired courtesy of Calpine and UC Berkeley) we limitted the earthquakes to an area between 38.7 and 38.9 degree North -122.9 and -122.6 West and depths up to 14 km and period between Jan 2006 and Jun 2016. The area has been divided in a mesh of 0.025 deg x 0.025 deg x 0.25 km and the eq. density for each month of observation in each created 'node' has been found, and such a Density Time History is created. This DTH is used to study the temporal and spacial behaviur of earthquakes by defining spatial domains through clustering. In the end we used ICA to identify independent sources of earthquakes in the area.  
+
 
 ## 3. Results
 
 The result of this research activity will be demonstrated here once the paper is published. 
-
-![image](https://user-images.githubusercontent.com/119458526/232872517-a3fb0029-218f-4612-94e1-7a90693de277.png)
-
 
 ## 4. Credits 
 
