@@ -1,3 +1,7 @@
+"""
+MS - 23/08/23
+"""
+
 import scipy.signal as sgn
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -27,7 +31,7 @@ def plot_means_subplots(time_series:np.ndarray, cluster_labels:list, plotted_clu
     # Parameters and label definitions
     mpl.rcParams['font.size'] = 14
     arr_labels = np.array(cluster_labels)
-    legend_labels = ['DTH-A', 'DTH-B', 'DTH-C']
+    # legend_labels = ['DTH-A', 'DTH-B', 'DTH-C']
     years = np.arange(2006, 2017, 1)
     tick_labels = [f'\'{item[-2:]}' for item in map(str, years)]
     i = 0
@@ -50,7 +54,7 @@ def plot_means_subplots(time_series:np.ndarray, cluster_labels:list, plotted_clu
     
 
         # Mean and STD plots with fill between
-        ax.plot(time_norm, label='{}'.format(legend_labels[i]), c='k')
+        ax.plot(time_norm, label=f'Cluster {i}', c='k')
         ax.plot(time_norm + std, "k--")
         ax.plot(time_norm - std, 'k--')
         ax.fill_between(x, time_norm - std, time_norm + std, color='#a7c8e2')
@@ -131,9 +135,9 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
     long_range = np.arange(geo_bounds['long_min'], geo_bounds['long_max'] + geo_bounds['step_l'], geo_bounds['step_l'])
     depth_range = np.arange(geo_bounds['depth_min'], geo_bounds['depth_max'] + geo_bounds['step_d'], geo_bounds['step_d'])
     
-    x_cat = df_catalogue['Longitude']
-    y_cat = df_catalogue['Latitude']
-    z_cat = df_catalogue['Depth']
+    x_cat = df_catalogue['longitude']
+    y_cat = df_catalogue['latitude']
+    z_cat = df_catalogue['depth']
 
     H_cat, xedges_cat, yedges_cat = np.histogram2d(np.array(x_cat), np.array(y_cat), bins=(x_contour, y_contour))
     H_cat_depth, xedges_cat_depth, zedges_cat_depth = np.histogram2d(np.array(x_cat), -np.array(z_cat), bins=(x_contour,np.flip(z_contour)))
@@ -144,10 +148,10 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
     # Setup the plot
     mpl.rcParams['font.size'] = 14
     fig, axes = plt.subplots(nrows=2, ncols=len(plotted_clusters), 
-                             figsize=(len(plotted_clusters)*4 + 1, 9), sharey='row',
-                             gridspec_kw={'width_ratios': [1, 1, 1.2], "height_ratios":[1, 1.2]})
+                             figsize=(len(plotted_clusters)*4 + 1, 9), sharey='row',)
+                            #  gridspec_kw={'width_ratios': [1, 1, 1.2], "height_ratios":[1, 1.2]})
     
-    columns = ['Domain A', 'Domain B', 'Domain C']
+    # columns = ['Domain A', 'Domain B', 'Domain C']
 
     
     df_nodes = df_labels.copy()
@@ -216,7 +220,7 @@ def plot_cluster_nodes(df_catalogue:pd.DataFrame, df_density:pd.DataFrame,  df_l
         axes[0, i].set_xticks(np.arange(-122.9, -122.61, 0.05))
         axes[0, i].set_xticklabels(["-122.9", "", "-122.8", "", "-122.7", ""])
         axes[0, i].grid(visible=True, axis='both', alpha=0.3, which='major', c='#dbdbdb')
-        axes[0, i].set_title(f'{columns[i]}')
+        axes[0, i].set_title(f'{i}')
         # axes[0, i].set_clim(0, 6)
 
 
