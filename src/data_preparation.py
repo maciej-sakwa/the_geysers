@@ -16,6 +16,16 @@ log.setLevel(logging.DEBUG)
 
 
 def find_closest_ind(array:np.ndarray, row:pd.Series, col_id:int) -> int:
+    """Find the closest index, used to aggregate events into defined grid.
+
+    Args:
+        array (np.ndarray): Array to search
+        row (pd.Series): DataFrame row
+        col_id (int): DataFrame column id
+
+    Returns:
+        int: index
+    """
 
     for i in range(len(array)):
         if i + 1 == len(array):
@@ -29,6 +39,16 @@ def find_closest_ind(array:np.ndarray, row:pd.Series, col_id:int) -> int:
 
 
 def index_1d(row:pd.Series, max_lat:int, max_long:int) -> int:
+    """Get flat index (3D -> 1D)
+
+    Args:
+        row (pd.Series): DataFrame row
+        max_lat (int): maximum index in latitude range
+        max_long (int): maximum index in longitude range
+
+    Returns:
+        int: Flat index
+    """
 
     # Extract data
     lat_id = row['lat_id']
@@ -39,6 +59,7 @@ def index_1d(row:pd.Series, max_lat:int, max_long:int) -> int:
     return int(lat_id + max_lat * long_id + max_lat * max_long * depth_id)
 
 class Catalogue:
+
     def __init__(self, catalogue, geo_bounds):
         self.df_catalogue = catalogue
         self.geo_bounds = geo_bounds
@@ -124,6 +145,7 @@ class Catalogue:
         Compile density dataset based on indexed dataset
         :return: Density dataset
         """
+
         logging.info('Compiling density dataset...')
         # Find all time steps
         periods = self.reduced_catalogue.day_id.unique()
@@ -162,6 +184,7 @@ class Catalogue:
         :param density_dataset: The indexed density dataset
         :return: Time series
         """
+
         lat_max = len(self.lat_range)
         long_max = len(self.long_range)
 
@@ -239,51 +262,46 @@ class Catalogue:
         return distance_matrix
 
     
-    def calculate_mixtures(self):
+    def calculate_means(self):
+        """ Find mean time series for each cluster
 
+        Returns:
+            tuple: means and standardized means
+        """
+
+        # Initialize outputs
         mixtures = []
         mixtures_std = []
-        # loop over the clusters
+
+        # Get cluster numbers
         unique_clusters = np.unique(self.df_density.cluster)
 
-        for uc in unique_clusters:
-            df_sum_one_cluster = self.df_density [self.df_density.cluster == uc]
-                # loop pver the grid nodes of the clsuter
-            list_signals_one_cl_one_node = []
-            for gnc in np.unique(df_sum_one_cluster.index_1D):
-                df_sum_one_cluster_one_node = df_sum_one_cluster [df_sum_one_cluster.index_1D == gnc]
-                norm_factor = max(df_sum_one_cluster_one_node.density)
-                list_signals_one_cl_one_node.append(self.time_series_array[gnc,:]/norm_factor)
-            array_list_signals_one_cl_one_node = np.array(list_signals_one_cl_one_node)
-            mean_mixture = np.average(array_list_signals_one_cl_one_node, axis=0)
+        # Loop over clusters
+        for u_cluster in unique_clusters:
+
+            df_density_cluster = self.df_density [self.df_density.cluster == u_cluster]
+            
+            # Loop over the grid nodes of the clsuter
+            signals_one_node = []
+            for u_node in np.unique(df_density_cluster.index_1D):
+
+                # Extract node time series and normalize by the max value in each node
+                df_density_cluster_node = df_density_cluster [df_density_cluster.index_1D == u_node]
+                norm_factor = np.max(df_density_cluster_node.density)
+                signals_one_node.append(self.time_series_array[u_node,:]/norm_factor)
+
+
+            mean_mixture = np.average(np.array(signals_one_node), axis=0)
             mixtures.append(mean_mixture)
-            std_obj = StandardScaler()
-            mean_mixture_std = std_obj.fit_transform(mean_mixture.reshape(-1,1))
+
+            # Standard scaling of results
+            scaler = StandardScaler()
+            mean_mixture_std = scaler.fit_transform(mean_mixture.reshape(-1,1))
             mixtures_std.append(mean_mixture_std[:,0])
 
         return np.array(mixtures).T, np.array(mixtures_std).T
 
     
-    def perform_hac(matrix, method='ward', threshold=0.15, n_cluster=5, criterion='distance'):
-        """
-        Perform HAC clustering with scipy algorithm based on the distance matrix
-        """
-
-
-        cond_matrix = distance.squareform(matrix)
-        Z = hierarchy.linkage(cond_matrix, method=method)
-        # threshold_dist = np.amax(hierarchy.cophenet(Z)) * threshold
-        # labels = hierarchy.fcluster(Z, t=threshold_dist, criterion=criterion)
-        labels = hierarchy.fcluster(Z, t=n_cluster, criterion=criterion)
-
-        # Clustering scores
-        # ch = calinski_harabasz_score(cond_matrix, labels)
-        sil = silhouette_score(matrix, labels)
-        print("Score: {}".format(sil))
-
-        return labels, Z
-
-
     def b_value_error(self, mag_borders=(1.8, 3.0), boot_iter = 100):
         """
         Calculates b-value means and std error for the chosen clusters with bootstraping

@@ -1,7 +1,4 @@
-/GPU_cross_correlation.py
-/ivi_trace.py
-/__pycache__
-/complete_data_processing.py
-/main_geysers_nn.py
-/main_geysers_nn - Copy.py
-/clustering_module.py
+/sandbox*
+/data
+/img/*/
+
